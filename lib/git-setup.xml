@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<project name="git-setup" xmlns:git="antlib:com.rimerosolutions.ant.git">
+
+    <target name="git-clear">
+        <delete dir="${github.project.name}" failonerror="false"/>
+    </target>
+
+    <target name="git-mkdr">
+        <mkdir dir="${github.project.name}"/>
+    </target>
+
+
+    <target name="git-setup" depends="git-clear, git-mkdr">
+        <echo>Git Setup for ${github.user.name}</echo>
+        <git:settings refId="github.settings" username="${github.user.username}" password="${github.user.password}"
+              name="${github.user.name}" email="${github.user.email}"/>
+        <git:git directory="${github.project.name}" settingsRef="github.settings">
+            <git:clone uri="${github.project.url}"/>
+        </git:git>
+    </target>
+
+    <target name="git-checkout-branch" depends="git-setup">
+
+        <echo>Checkout branch ${branch.name}</echo>
+
+        <delete file="${branchlist.file}" failonerror="false"/>
+
+        <git:git directory="${github.project.name}" verbose="true">
+            <git:branchlist outputfilename="${branchlist.file}" verifycontainnames="${branch.name}" failonerror="false"/>
+        </git:git>
+
+        <if>
+            <available file="${branchlist.file}"/>
+            <then>
+                <property name="createBranch" value="false"/>
+            </then>
+            <else>
+                <property name="createBranch" value="true"/>
+            </else>
+        </if>
+        <echo>Create branch :${createBranch}</echo>
+
+        <git:git directory="${github.project.name}" settingsRef="github.settings">
+            <git:checkout branchname="${branch.name}" createBranch="${createBranch}"/>
+        </git:git>
+    </target>
+
+    <target name="git-commit-to-branch">
+        <echo>Committing to ${branch.name}</echo>
+        <git:settings refId="github.settings" username="${github.user.username}" password="${github.user.password}"
+              name="${github.user.name}" email="${github.user.email}"/>
+        <git:git directory="${github.project.name}" verbose="true" settingsRef="github.settings">
+            <git:add>
+                <fileset dir="${github.project.name}" includes="**/*"/>
+            </git:add>
+        </git:git>
+
+        <git:git directory="${github.project.name}" verbose="true" settingsRef="github.settings">
+            <git:commit message="${branch.commit.message}" settingsRef="github.settings"/>
+            <!--<git:uptodate failOnError="true"/>-->
+            <git:push uri="${github.project.url}"/>
+        </git:git>
+
+    </target>
+
+</project>
