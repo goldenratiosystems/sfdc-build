@@ -44,11 +44,7 @@
         <echo>Create branch :${createBranch}</echo>
 
         <git:git directory="${github.project.name}" settingsRef="github.settings">
-            <git:checkout branchname="${base.branch.name}" createBranch="false"/>
-        </git:git>
-
-        <git:git directory="${github.project.name}" settingsRef="github.settings">
-            <git:checkout branchname="${branch.name}" createBranch="${createBranch}"/>
+            <git:checkout branchname="${branch.name}" createBranch="${createBranch}" startPoint="${base.branch.name}"/>
         </git:git>
     </target>
 

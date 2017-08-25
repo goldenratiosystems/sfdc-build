@@ -17,6 +17,7 @@
 			singlePackage="true"
 			allowMissingFiles="false"
             logType="Detail"
+            checkOnly="${checkOnly}"
 		/>
 	</target>
 
