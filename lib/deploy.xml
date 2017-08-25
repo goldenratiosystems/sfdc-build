@@ -34,7 +34,7 @@
 		<fileset dir="${github.project.name}/src" includes="labels/CustomLabels.labels"/>
 		<!--<fileset dir="${github.project.name}/src" includes="layouts/*.layout"/>-->
         <fileset dir="${github.project.name}/src" includes="settings/*.settings" excludes="settings/PersonalJourney.settings,
-settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,settings/Opportunity.settings"/>
+settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,settings/Opportunity.settings,settings/Ideas.settings"/>
         <fileset dir="${github.project.name}/src" includes="analyticSnapshots/*.snapshot"/>
         <fileset dir="${github.project.name}/src" includes="aura/**/*.*"/>
         <fileset dir="${github.project.name}/src" includes="autoResponseRules/*.autoResponseRules"/>
@@ -107,7 +107,7 @@ settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,
             <fileset dir="${retrieve.dir}/src" includes="components/*.component,components/*-meta.xml"/>
             <fileset dir="${retrieve.dir}/src" includes="labels/CustomLabels.labels"/>
             <fileset dir="${retrieve.dir}/src" includes="settings/*.settings" excludes="settings/PersonalJourney.settings,
-    settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,settings/Opportunity.settings"/>
+    settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,settings/Opportunity.settings,settings/Ideas.settings"/>
             <fileset dir="${retrieve.dir}/src" includes="analyticSnapshots/*.snapshot"/>
             <fileset dir="${retrieve.dir}/src" includes="aura/**/*.*"/>
             <fileset dir="${retrieve.dir}/src" includes="autoResponseRules/*.autoResponseRules"/>
