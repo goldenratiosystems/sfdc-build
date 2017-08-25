@@ -16,7 +16,7 @@
               name="${github.user.name}" email="${github.user.email}"/>
         <git:git directory="${github.project.name}" settingsRef="github.settings">
             <git:clone uri="${github.project.url}"/>
-            <git:fetch uri="${github.project.url}" directory="${github.project.name}"/>
+            <!--<git:fetch uri="${github.project.url}" directory="${github.project.name}"/>-->
         </git:git>
 
 
@@ -45,6 +45,15 @@
 
         <git:git directory="${github.project.name}" settingsRef="github.settings">
             <git:checkout branchname="${branch.name}" createBranch="${createBranch}" startPoint="${base.branch.name}"/>
+        </git:git>
+    </target>
+
+    <target name="git-fetch-branch" depends="git-setup">
+
+        <echo>Checkout branch ${branch.name}</echo>
+
+        <git:git directory="${github.project.name}" settingsRef="github.settings">
+            <git:checkout branchname="${branch.name}" createBranch="false"/>
         </git:git>
     </target>
 
