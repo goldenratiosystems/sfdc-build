@@ -16,7 +16,10 @@
               name="${github.user.name}" email="${github.user.email}"/>
         <git:git directory="${github.project.name}" settingsRef="github.settings">
             <git:clone uri="${github.project.url}"/>
+            <git:fetch uri="${github.project.url}" directory="${github.project.name}"/>
         </git:git>
+
+
     </target>
 
     <target name="git-checkout-branch" depends="git-setup">
@@ -39,6 +42,10 @@
             </else>
         </if>
         <echo>Create branch :${createBranch}</echo>
+
+        <git:git directory="${github.project.name}" settingsRef="github.settings">
+            <git:checkout branchname="${base.branch.name}" createBranch="false"/>
+        </git:git>
 
         <git:git directory="${github.project.name}" settingsRef="github.settings">
             <git:checkout branchname="${branch.name}" createBranch="${createBranch}"/>

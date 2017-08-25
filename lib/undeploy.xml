@@ -135,7 +135,7 @@
 	<target name="generateEmptyPackage">
 		<echo file="${stage.dir}/deploy/package.xml"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-	<version>30.0</version>
+	<version>38.0</version>
 </Package>]]>
 		</echo>
 	</target>
@@ -201,7 +201,7 @@
 		<members>*</members>
 		<name>ApexPage</name>
 	</types>
-	<version>32.0</version>
+	<version>38.0</version>
 </Package>]]>
 		</echo>
 	</target>
@@ -311,6 +311,10 @@
 		<members>*</members>
 		<name>AssignmentRules</name>
 	</types>
+    <types>
+        <members>*</members>
+        <name>GlobalValueSet</name>
+    </types>
 	<types>
 		<members>*</members>
 		<name>Queue</name>
@@ -319,7 +323,7 @@
 		<members>*</members>
 		<name>StaticResource</name>
 	</types>
-	<version>32.0</version>
+	<version>38.0</version>
 </Package>]]>
 		</echo>
 	</target>
@@ -328,7 +332,7 @@
 
 		<echo file="${stage.dir}/deploy/package.xml"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-	<version>32.0</version>
+	<version>38.0</version>
 </Package>]]></echo>
 
 		<echo file="${stage.dir}/deploy/destructiveChanges.xml"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
@@ -1191,6 +1195,7 @@ strEcho='';
 				var br = new scope.BufferedReader(new scope.InputStreamReader(new scope.DataInputStream(new scope.FileInputStream(file))));
 
 				var emptyObject = '';
+                var inCompactLayoutBlock = false;
 				while ((line = br.readLine()) != null) {
 
 					if (line.indexOf('<fields>') > -1) {
@@ -1201,6 +1206,9 @@ strEcho='';
 							if (line.indexOf('<lookupFilter>') > -1) {
 								skipContent = true;
 							}
+                            if (line.indexOf('<compactLayouts>') > -1) {
+                                skipContent = true;
+                            }
 
 							if (skipContent == false) {
 								resultFields += line + '\n';
