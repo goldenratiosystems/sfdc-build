@@ -25,7 +25,7 @@
     <import file="${basedir}/lib/exec_anon.xml"/>
 
 	<target name="deploy-branch">
-	   <antcall target="git-checkout-branch"/>
+	   <antcall target="git-fetch-branch"/>
 	   <antcall target="deploy"/>
 	</target>
 
