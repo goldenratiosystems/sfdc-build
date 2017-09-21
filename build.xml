@@ -470,6 +470,7 @@
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:formFactor"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:pageOrSobjectType"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:skipRecordTypeSelect"/>
+                <replace path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:type/text()" withText="Default"/>
             </xmltask>
 
             <replaceregexp flags="gm"
