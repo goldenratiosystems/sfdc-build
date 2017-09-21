@@ -449,7 +449,7 @@
             <xmltask toDir="@{tempDir}/@{type}/src/communityTemplateDefinitions">
                 <fileset dir="@{tempDir}/@{type}/src/communityTemplateDefinitions" includes="*.communityTemplateDefinition" />
                 <remove path="//:CommunityTemplateDefinition/:pageSetting"/>
-                <remove path="//:CommunityTemplateDefinition/:bundlesInfo[:type/text() = 'PreviewImage']"/>
+                <!--<remove path="//:CommunityTemplateDefinition/:bundlesInfo[:type/text() = 'PreviewImage']"/>-->
             </xmltask>
 
             <xmltask toDir="@{tempDir}/@{type}/src/communityThemeDefinitions">
@@ -465,6 +465,7 @@
                 <![CDATA[
                  <searchLayouts/>
                 ]]></replace>
+                <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Flexipage']"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:comment"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:content"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:formFactor"/>
@@ -928,6 +929,7 @@
                 <remove path="//:Package/:types/:members[text() = 'SiteHome']"/>
                 <remove path="//:Package/:types/:members[text() = 'CollaborationGroup.NewGroupRecord']"/>
                 <remove path="//:Package/:types/:members[text() = 'CollaborationGroup.NewGroupMember']"/>
+                <remove path="//:Package/:types/:members[text() = 'siteAsset_3740c5488bb14240a49063e97deae226']"/>
             </xmltask>
 
             <!-- create package definition for fixes -->
