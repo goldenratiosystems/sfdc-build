@@ -909,6 +909,8 @@
                 <remove path="//:Package/:types/:members[text() = 'Account_Management_Home_Page']"/>
                 <remove path="//:Package/:types/:members[text() = 'Sales_Opportunity_Lightning_Page']"/>
                 <remove path="//:Package/:types/:members[text() = 'SiteHome']"/>
+                <remove path="//:Package/:types/:members[text() = 'CollaborationGroup.NewGroupRecord']"/>
+                <remove path="//:Package/:types/:members[text() = 'CollaborationGroup.NewGroupMember']"/>
             </xmltask>
 
             <!-- create package definition for fixes -->
@@ -942,7 +944,7 @@
                 </Package>
             </echoxml>
 
-            <!--destroy!-->
+            <!--destroy-->
             <sf:deploy
                 serverurl="${loginUrl}"
                 sessionid="${sessionId}"
