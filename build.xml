@@ -464,13 +464,12 @@
                 <replace path="//:CustomObject/:searchLayouts">
                 <![CDATA[
                  <searchLayouts/>
-                ]]>
+                ]]></replace>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:comment"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:content"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:formFactor"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:pageOrSobjectType"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:skipRecordTypeSelect"/>
-                </replace>
             </xmltask>
 
             <replaceregexp flags="gm"
