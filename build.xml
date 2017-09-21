@@ -465,13 +465,15 @@
                 <![CDATA[
                  <searchLayouts/>
                 ]]></replace>
-                <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Flexipage']"/>
+
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:comment"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:content"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:formFactor"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:pageOrSobjectType"/>
                 <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:skipRecordTypeSelect"/>
                 <replace path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:type/text()" withText="Default"/>
+
+                <remove path="//:CustomObject/:actionOverrides[:type/text() = 'Default' and :actionName/text() = 'View'][position()&gt;1]"/>
             </xmltask>
 
             <replaceregexp flags="gm"
