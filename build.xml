@@ -172,6 +172,14 @@
 
             <sfRetrieve retrieveTarget="@{tempDir}/@{type}/src" unpackaged="@{tempDir}/@{type}/src/package.xml"/>
 
+            <condition property="flowavailable">
+                <available file="@{tempDir}/@{type}/src/flowDefinitions" type="dir"/>
+            </condition>
+
+            <if>
+             <equals arg1="${flowavailable}" arg2="true" />
+             <then>
+
             <!-- set Flow activeVersionNumber as 0-->
             <xmltask toDir="@{tempDir}/@{type}/src/flowDefinitions">
                 <fileset dir="@{tempDir}/@{type}/src/flowDefinitions" includes="*.flowDefinition" />
@@ -188,6 +196,9 @@
             </zip>
 
             <sfDeploy zipFile="@{tempDir}/@{type}/@{zipFile}" checkOnly="false" purgeOnDelete="true"/>
+
+            </then>
+            </if>
 
         </sequential>
     </macrodef>
@@ -438,6 +449,7 @@
             <xmltask toDir="@{tempDir}/@{type}/src/communityTemplateDefinitions">
                 <fileset dir="@{tempDir}/@{type}/src/communityTemplateDefinitions" includes="*.communityTemplateDefinition" />
                 <remove path="//:CommunityTemplateDefinition/:pageSetting"/>
+                <remove path="//:CommunityTemplateDefinition/:bundlesInfo[:type/text() = 'PreviewImage']"/>
             </xmltask>
 
             <xmltask toDir="@{tempDir}/@{type}/src/communityThemeDefinitions">
@@ -453,6 +465,11 @@
                 <![CDATA[
                  <searchLayouts/>
                 ]]>
+                <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:comment"/>
+                <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:content"/>
+                <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:formFactor"/>
+                <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:pageOrSobjectType"/>
+                <remove path="//:CustomObject/:actionOverrides[:type/text() != 'Default']/:skipRecordTypeSelect"/>
                 </replace>
             </xmltask>
 
@@ -944,7 +961,7 @@
                 </Package>
             </echoxml>
 
-            <!--destroy-->
+            <!--destroy -->
             <sf:deploy
                 serverurl="${loginUrl}"
                 sessionid="${sessionId}"
@@ -952,6 +969,7 @@
                 ignoreWarnings="true"
                 singlePackage="true"
                 purgeOnDelete="true"
+                checkOnly="true"
             />
 
         </sequential>
