@@ -40,58 +40,476 @@
     </target>
 
     <target name="destroy">
+
+        <antcall target="deactivateFlows"/>
+        <antcall target="cleanupMetadata"/>
+
         <destroy
             username="${sf.username}"
             password="${sf.password}"
             serverurl="${sf.server}"
         />
+
     </target>
 
-    <target name="customdelete">
-        <sf:deploy
-                serverurl="${sf.server}" username="${sf.username}" password="${sf.password}"
-                deployRoot="tmp11"
-                ignoreWarnings="true"
-                singlePackage="true"
-                purgeOnDelete="true"
-            />
-    </target>
+    <macrodef name="sfRetrieve">
+        <attribute name="retrieveTarget"/>
+        <attribute name="unpackaged"/>
+        <attribute name="maxPoll" default="2000"/>
+        <attribute name="pollWaitMillis" default="5000"/>
 
-
-    <macrodef name="retrieveMetaItem">
-        <attribute name="metadataType"/>
         <sequential>
-            <echo>Preparing destructiveChangesPost.xml - @{metadataType}</echo>
-            <local name="listMetadataResult.tmp" />
-            <tempfile property="listMetadataResult.tmp" prefix="@{metadataType}" suffix=".tmp" createfile="true" deleteonexit="true" />
-            <sf:listMetadata serverurl="${sf.server}" username="${sf.username}" password="${sf.password}" metadataType="@{metadataType}" resultFilePath="${listMetadataResult.tmp}"/>
-            <echo>Preparing destructiveChangesPost.xml - @{listMetadataResult.tmp}</echo>
-            <concat destFile="@{tempDir}/temppppppppp.xml" append="true">
-                <fileset file="${listMetadataResult.tmp}" />
-            </concat>
+            <sf:retrieve
+                username="${sf.username}"
+                password="${sf.password}"
+                serverurl="${sf.server}"
+                retrieveTarget="@{retrieveTarget}"
+                unpackaged="@{unpackaged}"
+                maxPoll="@{maxPoll}"
+                pollWaitMillis="@{pollWaitMillis}"
+            />
         </sequential>
     </macrodef>
 
-    <macrodef name="bulkRetrieveForDestroy2">
-                <attribute name="metadataType" />
-                <attribute name="directoryName" />
+    <macrodef name="sfDeploy">
+        <attribute name="zipFile"/>
+        <attribute name="maxPoll" default="2000"/>
+        <attribute name="pollWaitMillis" default="5000"/>
+        <attribute name="purgeOnDelete" default="false"/>
+        <attribute name="checkOnly" default="true"/>
 
-                <sequential>
-                    <echo>Preparing package.xml - @{metadataType}</echo>
-                    <mkdir dir="@{tempDir}/@{directoryName}" />
-                    <sf:bulkRetrieve serverurl="${sf.server}" username="${sf.username}" password="${sf.password}" retrieveTarget="@{tempDir}" metadataType="@{metadataType}" batchSize="10000" containingFolder="unfiled$public"/>
+        <sequential>
+            <sf:deploy
+                username="${sf.username}"
+                password="${sf.password}"
+                serverurl="${sf.server}"
+                zipFile="@{zipFile}"
+                maxPoll="@{maxPoll}"
+                pollWaitMillis="@{pollWaitMillis}"
+                rollbackOnError="true"
+                singlePackage="true"
+                allowMissingFiles="false"
+                logType="Detail"
+                purgeOnDelete="@{purgeOnDelete}"
+                checkOnly="@{checkOnly}"
+            />
+        </sequential>
+    </macrodef>
 
-                </sequential>
-            </macrodef>
+    <!-- PrePurge Deployments-->
+    <!-- Step 1 : Deactivate Flows-->
 
-
-    <target name="retrieve-meta">
-        <retrieveMetaItem metadataType="SearchLayouts"/>
-        <!--<bulkRetrieveForDestroy2
-                metadataType="EmailTemplate"
-                directoryName="EmailTemplates"
-            />-->
+    <target name="deactivateFlows">
+        <deactivateFlows/>
     </target>
+
+    <target name="generateDestructiveFlows">
+        <property name="dir" value="temp/prepurge/retrieveFlows/src/flows"/>
+        <property name="outputFile" value="temp/prepurge/retrieveFlows/src/destructiveChangesPost.xml"/>
+
+        <!--<echoxml file="${outputFile}" namespacePolicy="all">-->
+        <concat destFile="${outputFile}" append="true"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+            <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+                <types>
+                <name>Flow</name>
+            ]]>
+        </concat>
+
+        <for param="file">
+            <path>
+                <fileset dir="${dir}">
+                    <include name="*.flow"/>
+                </fileset>
+            </path>
+            <sequential>
+                <local name="filename" />
+                <basename property="filename" file="@{file}"/>
+                <script language="javascript"><![CDATA[with (new JavaImporter(java.net, java.io)) {
+                        arr = project.getProperty('filename').replace('.flow','');
+                        print(arr);
+                        project.setProperty('filename', arr);
+                     }]]>
+                 </script>
+                <!--<echo message="${filename}"/>-->
+                <echo append="true" file="${outputFile}"><![CDATA[<members>${filename}</members>${line.separator}]]></echo>
+            </sequential>
+        </for>
+
+        <!--<echoxml file="${outputFile}" namespacePolicy="all"><![CDATA[-->
+        <concat destFile="${outputFile}" append="true"><![CDATA[
+            </types>
+            <version>40.0</version>
+            </Package>]]>
+        </concat>
+
+    </target>
+
+
+    <macrodef name="deactivateFlows">
+        <attribute name="type" default="retrieveFlows"/>
+        <attribute name="zipFile" default="deactivateFlows.zip"/>
+        <attribute name="tempDir" default="temp/prepurge"/>
+        <attribute name="apiVersion" default="40.0"/>
+
+        <sequential>
+            <delete dir="@{tempDir}/@{type}" failonerror="false"/>
+            <mkdir dir="@{tempDir}/@{type}" />
+            <mkdir dir="@{tempDir}/@{type}/src" />
+
+            <echoxml file="@{tempDir}/@{type}/src/package.xml" namespacePolicy="all">
+                <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+                    <types>
+                        <members>*</members>
+                        <name>Flow</name>
+                    </types>
+                    <types>
+                        <members>*</members>
+                        <name>FlowDefinition</name>
+                    </types>
+                    <version>@{apiVersion}</version>
+                </Package>
+            </echoxml>
+
+            <sfRetrieve retrieveTarget="@{tempDir}/@{type}/src" unpackaged="@{tempDir}/@{type}/src/package.xml"/>
+
+            <!-- set Flow activeVersionNumber as 0-->
+            <xmltask toDir="@{tempDir}/@{type}/src/flowDefinitions">
+                <fileset dir="@{tempDir}/@{type}/src/flowDefinitions" includes="*.flowDefinition" />
+                <replace path="//:FlowDefinition/:activeVersionNumber/text()" withText="0"/>
+            </xmltask>
+
+            <antcall target="generateDestructiveFlows"/>
+
+            <!-- create meta zip file-->
+            <zip destfile="@{tempDir}/@{type}/@{zipFile}" update="true">
+                <fileset dir="@{tempDir}/@{type}/src" includes="package.xml"/>
+                <fileset dir="@{tempDir}/@{type}/src" includes="destructiveChangesPost.xml"/>
+                <fileset dir="@{tempDir}/@{type}/src" includes="flowDefinitions/*.flowDefinition"/>
+            </zip>
+
+            <sfDeploy zipFile="@{tempDir}/@{type}/@{zipFile}" checkOnly="false" purgeOnDelete="true"/>
+
+        </sequential>
+    </macrodef>
+
+    <target name="cleanupMetadata">
+
+        <cleanupMetadata/>
+        <deployCleanupMetadata/>
+        <!--<sfDeploy zipFile="temp/prepurge/retrieveFlows.zip"/>-->
+        <!--<generateDestructiveFlows dir="temp/prepurge/src/flows"/>-->
+    </target>
+
+    <macrodef name="deployCleanupMetadata">
+        <attribute name="zipFile" default="deployCleanupMetadata.zip"/>
+        <attribute name="type" default="cleanupMetadata"/>
+        <attribute name="tempDir" default="temp/prepurge"/>
+        <sequential>
+        <zip destfile="@{tempDir}/@{type}/@{zipFile}" update="true">
+            <fileset dir="@{tempDir}/@{type}/src" includes="package.xml"/>
+            <fileset dir="@{tempDir}/@{type}/src" includes="flexipages/*.flexipage"/>
+            <fileset dir="@{tempDir}/@{type}/src" includes="communityTemplateDefinitions/*.communityTemplateDefinition"/>
+            <fileset dir="@{tempDir}/@{type}/src" includes="communityThemeDefinitions/*.communityThemeDefinition"/>
+            <fileset dir="@{tempDir}/@{type}/src" includes="objects/*.object"/>
+            <fileset dir="@{tempDir}/@{type}/src" includes="sites/*.site"/>
+            <fileset dir="@{tempDir}/@{type}/src" includes="pages/SiteHome.page,pages/SiteHome.page-meta.xml"/>
+            <fileset dir="@{tempDir}/@{type}/src" includes="aura/**/*.*"/>
+        </zip>
+        <sfDeploy zipFile="@{tempDir}/@{type}/@{zipFile}" checkOnly="false"/>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="cleanupMetadata">
+        <attribute name="type" default="cleanupMetadata"/>
+        <attribute name="tempDir" default="temp/prepurge"/>
+        <attribute name="apiVersion" default="40.0"/>
+
+        <sequential>
+
+            <!--<delete dir="@{tempDir}/@{type}" failonerror="false"/>-->
+            <mkdir dir="@{tempDir}/@{type}" />
+            <mkdir dir="@{tempDir}/@{type}/src" />
+
+            <echoxml file="@{tempDir}/@{type}/src/package.xml" namespacePolicy="all">
+                <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+                    <types>
+                        <members>*</members>
+                        <name>FlexiPage</name>
+                    </types>
+                    <types>
+                        <members>*</members>
+                        <name>CommunityTemplateDefinition</name>
+                    </types>
+                    <types>
+                        <members>*</members>
+                        <name>CommunityThemeDefinition</name>
+                    </types>
+                    <types>
+                        <name>CustomObject</name>
+                        <members>Activity</members>
+                        <members>AssistantProgress</members>
+                        <members>Campaign</members>
+                        <members>CampaignMember</members>
+                        <members>Case</members>
+                        <members>CaseContactRole</members>
+                        <members>Contact</members>
+                        <members>ContentVersion</members>
+                        <members>Contract</members>
+                        <members>ContractContactRole</members>
+                        <members>DuplicateRecordItem</members>
+                        <members>DuplicateRecordSet</members>
+                        <members>EmailMessage</members>
+                        <members>Event</members>
+                        <members>ExchangeUserMapping</members>
+                        <members>FeedItem</members>
+                        <members>Lead</members>
+                        <members>LinkedArticle</members>
+                        <members>Macro</members>
+                        <members>MacroAction</members>
+                        <members>MacroInstruction</members>
+                        <members>Opportunity</members>
+                        <members>OpportunityCompetitor</members>
+                        <members>OpportunityContactRole</members>
+                        <members>OpportunityLineItem</members>
+                        <members>Order</members>
+                        <members>OrderItem</members>
+                        <members>PartnerRole</members>
+                        <members>Pricebook2</members>
+                        <members>PricebookEntry</members>
+                        <members>Product2</members>
+                        <members>Site</members>
+                        <members>SocialPersona</members>
+                        <members>Solution</members>
+                        <members>StreamingChannel</members>
+                        <members>Task</members>
+                        <members>User</members>
+                        <members>LiveAgentSession</members>
+                        <members>LiveChatTranscript</members>
+                        <members>LiveChatTranscriptEvent</members>
+                        <members>LiveChatTranscriptSkill</members>
+                        <members>LiveChatVisitor</members>
+                        <members>*</members>
+                    </types>
+                    <types>
+                        <name>CustomSite</name>
+                        <members>*</members>
+                     </types>
+                    <types>
+                        <members>SiteHome</members>
+                        <name>ApexPage</name>
+                    </types>
+                    <types>
+                        <members>*</members>
+                        <name>CustomApplication</name>
+                    </types>
+                    <types>
+                        <members>*</members>
+                        <name>AuraDefinitionBundle</name>
+                    </types>
+                    <version>@{apiVersion}</version>
+                </Package>
+            </echoxml>
+
+            <sfRetrieve retrieveTarget="@{tempDir}/@{type}/src" unpackaged="@{tempDir}/@{type}/src/package.xml"/>
+
+            <!-- cleanup Aura components -->
+            <for param="file">
+                <path>
+                    <fileset dir="temp/prepurge/cleanupMetadata/src/aura">
+                        <include name="**/*.cmp"/>
+                    </fileset>
+                </path>
+                <sequential>
+                    <local name="filename" />
+                    <basename property="filename" file="@{file}"/>
+                    <echo file="@{file}"><![CDATA[<aura:component implements="forceCommunity:availableForAllPageTypes" access="global"></aura:component>]]></echo>
+                </sequential>
+            </for>
+
+            <for param="file">
+                <path>
+                    <fileset dir="temp/prepurge/cleanupMetadata/src/aura">
+                        <include name="**/*.design"/>
+                    </fileset>
+                </path>
+                <sequential>
+                    <local name="filename" />
+                    <basename property="filename" file="@{file}"/>
+                    <echo file="@{file}"><![CDATA[<design:component></design:component>]]></echo>
+                </sequential>
+            </for>
+
+            <for param="file">
+                <path>
+                    <fileset dir="temp/prepurge/cleanupMetadata/src/aura">
+                        <include name="**/*.js"/>
+                    </fileset>
+                </path>
+                <sequential>
+                    <local name="filename" />
+                    <basename property="filename" file="@{file}"/>
+                    <echo file="@{file}"><![CDATA[({})]]></echo>
+                </sequential>
+            </for>
+
+            <for param="file">
+                <path>
+                    <fileset dir="temp/prepurge/cleanupMetadata/src/aura">
+                        <include name="**/*.css"/>
+                    </fileset>
+                </path>
+                <sequential>
+                    <local name="filename" />
+                    <basename property="filename" file="@{file}"/>
+                    <echo file="@{file}"><![CDATA[ .THIS {} ]]></echo>
+                </sequential>
+            </for>
+
+            <for param="file">
+                <path>
+                    <fileset dir="temp/prepurge/cleanupMetadata/src/aura">
+                        <include name="**/*.auradoc"/>
+                    </fileset>
+                </path>
+                <sequential>
+                    <local name="filename" />
+                    <basename property="filename" file="@{file}"/>
+                    <echo file="@{file}"><![CDATA[<aura:documentation><aura:description></aura:description></aura:documentation>]]></echo>
+                </sequential>
+            </for>
+
+            <!-- remove custom tabs from Applucations -->
+            <xmltask toDir="@{tempDir}/@{type}/src/applications">
+                <fileset dir="@{tempDir}/@{type}/src/applications" includes="*.app" />
+                <remove path="//:CustomApplication/:tab[text()[contains(., '__c')]]"/>
+                <remove path="//:CustomApplication/:tab[text()[not(contains(., 'standard-'))]]"/>
+                <remove path="//:CustomApplication/:workspaceMappings/:mapping[:tab/text()[not(contains(., 'standard-'))]]"/>
+            </xmltask>
+
+            <!-- cleanup Custom site-->
+            <replaceregexp flags="gs">
+                <fileset dir="@{tempDir}/@{type}/src/sites/" includes="*.site" />
+                <regexp pattern="&lt;CustomSite xmlns=&quot;http://soap.sforce.com/2006/04/metadata&quot;&gt;.*&lt;active&gt;([^&lt;]+)&lt;/active&gt;.*&lt;allowStandardPortalPages&gt;([^&lt;]+)&lt;/allowStandardPortalPages&gt;.*&lt;clickjackProtectionLevel&gt;([^&lt;]+)&lt;/clickjackProtectionLevel&gt;.*&lt;indexPage&gt;([^&lt;]+)&lt;/indexPage&gt;.*&lt;masterLabel&gt;([^&lt;]+)&lt;/masterLabel&gt;.*&lt;requireHttps&gt;([^&lt;]+)&lt;/requireHttps&gt;.*&lt;siteType&gt;([^&lt;]+)&lt;/siteType&gt;.*&lt;subdomain&gt;([^&lt;]+)&lt;/subdomain&gt;.*.*&lt;urlPathPrefix&gt;([^&lt;]+)&lt;/urlPathPrefix&gt;.*&lt;/CustomSite&gt;" />
+                <substitution expression="&lt;CustomSite xmlns=&quot;http://soap.sforce.com/2006/04/metadata&quot;&gt;${line.separator}&lt;active&gt;\1&lt;/active&gt;${line.separator}&lt;allowStandardPortalPages&gt;\2&lt;/allowStandardPortalPages&gt;${line.separator}&lt;clickjackProtectionLevel&gt;\3&lt;/clickjackProtectionLevel&gt;${line.separator}&lt;indexPage&gt;SiteHome&lt;/indexPage&gt;${line.separator}&lt;masterLabel&gt;\5&lt;/masterLabel&gt;${line.separator}&lt;requireHttps&gt;\6&lt;/requireHttps&gt;${line.separator}&lt;siteType&gt;\7&lt;/siteType&gt;${line.separator}&lt;subdomain&gt;\8&lt;/subdomain&gt;${line.separator}&lt;urlPathPrefix&gt;\9&lt;/urlPathPrefix&gt;${line.separator}&lt;/CustomSite&gt;" />
+            </replaceregexp>
+
+            <xmltask toDir="@{tempDir}/@{type}/src/sites">
+                <fileset dir="@{tempDir}/@{type}/src/sites" includes="*.site" />
+                <remove path="//:CustomSite/:allowHomePage"/>
+                <remove path="//:CustomSite/:allowStandardAnswersPages"/>
+                <remove path="//:CustomSite/:allowStandardIdeasPages"/>
+                <remove path="//:CustomSite/:allowStandardLookups"/>
+                <remove path="//:CustomSite/:allowStandardSearch"/>
+                <remove path="//:CustomSite/:authorizationRequiredPage"/>
+                <remove path="//:CustomSite/:bandwidthExceededPage"/>
+                <remove path="//:CustomSite/:customWebAddresses"/>
+                <remove path="//:CustomSite/:fileNotFoundPage"/>
+                <remove path="//:CustomSite/:genericErrorPage"/>
+                <remove path="//:CustomSite/:inMaintenancePage"/>
+                <remove path="//:CustomSite/:requireInsecurePortalAccess"/>
+                <remove path="//:CustomSite/:siteAdmin"/>
+                <replace path="//:CustomSite/:indexPage/text()" withText="SiteHome"/>
+            </xmltask>
+
+            <!-- create stub apex page for custom sites -->
+            <script language="javascript">with (new JavaImporter(java.io)) {
+                if ('${NumberOfSites.tmp}') {
+                    var page = project.createTask('echo');
+                    page.setFile(new File('@{tempDir}/@{type}/src/pages/SiteHome.page'));
+                    page.setMessage('&lt;apex:page/&gt;');
+                    page.perform();
+                    var meta = project.createTask('echo');
+                    meta.setFile(new File('@{tempDir}/@{type}/src/pages/SiteHome.page-meta.xml'));
+                    meta.setMessage('&lt;ApexPage&gt;&lt;label&gt;SiteHome&lt;/label&gt;&lt;/ApexPage&gt;');
+                    meta.perform();
+                }
+            }</script>
+
+            <!-- cleanup Flexipages-->
+            <xmltask toDir="@{tempDir}/@{type}/src/flexipages">
+                <fileset dir="@{tempDir}/@{type}/src/flexipages" includes="*.flexipage" />
+                <remove path="//:FlexiPage/:flexiPageRegions/:componentInstances"/>
+                <remove path="//:FlexiPage/:flexiPageRegions[:type='Facet']"/>
+                <remove path="//:FlexiPage/:parentFlexiPage"/>
+                <remove path="//:FlexiPage/:flexiPageRegions/:mode[text()='Replace']"/>
+            </xmltask>
+
+            <!-- Community Template and Theme -->
+            <xmltask toDir="@{tempDir}/@{type}/src/communityTemplateDefinitions">
+                <fileset dir="@{tempDir}/@{type}/src/communityTemplateDefinitions" includes="*.communityTemplateDefinition" />
+                <remove path="//:CommunityTemplateDefinition/:pageSetting"/>
+            </xmltask>
+
+            <xmltask toDir="@{tempDir}/@{type}/src/communityThemeDefinitions">
+                <fileset dir="@{tempDir}/@{type}/src/communityThemeDefinitions" includes="*.communityThemeDefinition" />
+                <remove path="//:CommunityThemeDefinition/:themeSetting[:themeLayoutType/text() != 'Login']"/>
+            </xmltask>
+
+            <!-- Cleanup Formula Fields, lookupFilter, WebLinks, SerachLayouts -->
+
+            <xmltask toDir="@{tempDir}/@{type}/src/objects">
+                <fileset dir="@{tempDir}/@{type}/src/objects" includes="*.object" />
+                <replace path="//:CustomObject/:searchLayouts">
+                <![CDATA[
+                 <searchLayouts/>
+                ]]>
+                </replace>
+            </xmltask>
+
+            <replaceregexp flags="gm"
+                match="&lt;webLinks&gt;[\s\S]*?&lt;\/webLinks&gt;"
+                replace="&lt;!--\0--&gt;">
+                <fileset dir="@{tempDir}/@{type}/src/objects/">
+                    <include name="*.object"/>
+                </fileset>
+            </replaceregexp>
+
+            <replaceregexp flags="gm"
+                match="&lt;lookupFilter&gt;[\s\S]*?&lt;\/lookupFilter&gt;"
+                replace="&lt;!--\0--&gt;">
+                <fileset dir="@{tempDir}/@{type}/src/objects/">
+                    <include name="*.object"/>
+                </fileset>
+            </replaceregexp>
+
+            <replaceFormulaField
+                dir="@{tempDir}/@{type}/src/objects/"
+                files="*.object"
+                type="Checkbox"
+                value="false"
+                />
+
+            <replaceFormulaField
+                dir="@{tempDir}/@{type}/src/objects/"
+                files="*.object"
+                type="Number"
+                value="0"
+                />
+
+            <replaceFormulaField
+                dir="@{tempDir}/@{type}/src/objects/"
+                files="*.object"
+                type="Text"
+                value="''"
+                />
+        </sequential>
+    </macrodef>
+
+    <macrodef name="replaceFormulaField">
+        <attribute name="dir" />
+        <attribute name="files" />
+        <attribute name="type" />
+        <attribute name="value" />
+        <sequential>
+            <echo>Cleanup formula fields - @{type}</echo>
+            <xmltask toDir="@{dir}">
+                <fileset dir="@{dir}" includes="@{files}" />
+
+                <replace path="//:CustomObject/:fields[:type='@{type}' and :formula]/:formula/text()" withText="@{value}"/>
+                <remove path="//:CustomObject/:fields[:type='@{type}' and :formula]/:formulaTreatBlanksAs"/>
+            </xmltask>
+        </sequential>
+    </macrodef>
 
     <target name="qdpl">
         <sf:deploy
@@ -233,38 +651,28 @@
                     <if>
                      <equals arg1="@{metadataType}" arg2="EmailTemplate" />
                      <then>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp1" folder="Chat_Team"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp2" folder="Client_Delivery"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp3" folder="Marketing_Template"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp4" folder="Military_Wellness_Initiative"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp5" folder="RUSH_Tier_1_Choice"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp6" folder="RUSH_Tier_1_archive"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp7" folder="RUSH_Tier_2"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp8" folder="Registration"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp9" folder="Rewards"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp10" folder="Sales_Team_Emails"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp11" folder="Site_Support"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp12" folder="Syncing"/>
-                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="listMetadataResult.tmp13" folder="unfiled$public"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder1.tmp" folder="Chat_Team"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder2.tmp" folder="Client_Delivery"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder3.tmp" folder="Marketing_Template"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder4.tmp" folder="Military_Wellness_Initiative"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder5.tmp" folder="RUSH_Tier_1_Choice"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder6.tmp" folder="RUSH_Tier_1_archive"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder7.tmp" folder="RUSH_Tier_2"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder8.tmp" folder="Registration"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder9.tmp" folder="Rewards"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder10.tmp" folder="Sales_Team_Emails"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder11.tmp" folder="Site_Support"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder12.tmp" folder="Syncing"/>
+                       <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="folder13.tmp" folder="unfiled$public"/>
 
                        <concat destFile="${listMetadataResult.tmp}" append="true">
-                            <fileset file="listMetadataResult.tmp1" />
-                            <fileset file="listMetadataResult.tmp2" />
-                            <fileset file="listMetadataResult.tmp3" />
-                            <fileset file="listMetadataResult.tmp4" />
-                            <fileset file="listMetadataResult.tmp5" />
-                            <fileset file="listMetadataResult.tmp6" />
-                            <fileset file="listMetadataResult.tmp7" />
-                            <fileset file="listMetadataResult.tmp8" />
-                            <fileset file="listMetadataResult.tmp9" />
-                            <fileset file="listMetadataResult.tmp10" />
-                            <fileset file="listMetadataResult.tmp11" />
-                            <fileset file="listMetadataResult.tmp12" />
-                            <fileset file="listMetadataResult.tmp13" />
+                            <fileset file="folder*.tmp" />
 
                             <filterchain>
                                 <scriptfilter language="javascript">
                                     var line = self.getToken();
+
+                                    //Standard Emails
 
                                     if (line.indexOf("RejectionEmail") != -1) {
                                         self.setToken(null);
@@ -294,41 +702,14 @@
                                         self.setToken(null);
                                     }
                                 </scriptfilter>
-                                <!--<linecontains negate="true">
-                                    <contains value="RejectionEmail"/>
-                                    <contains value="CommunityWelcomeEmailTemplate"/>
-                                    <contains value="UpdateConnEmail"/>
-                                    <contains value="DeactivationEmail"/>
-                                    <contains value="CommunityForgotPasswordEmailTemplate"/>
-                                    <contains value="CommunityChangePasswordEmailTemplate"/>
-                                    <contains value="InvitationEmail"/>
-                                    <contains value="AcceptanceEmail"/>
-                                </linecontains>-->
                             </filterchain>
                        </concat>
-
-
 
                      </then>
                      <else>
                        <sf:listMetadata serverurl="${loginUrl}" sessionid="${sessionId}" metadataType="@{metadataType}" resultFilePath="${listMetadataResult.tmp}" />
                      </else>
                     </if>
-
-                    <!--<if>
-                        <equals arg1="@{metadataType}" arg2="WorkflowRule" />
-                        <then>
-                            <echo>destructiveChangesPost - @{metadataType}</echo>
-                            <concat destFile="@{tempDir}/destructiveChangesPost.xml" append="true">
-                                <fileset file="${listMetadataResult.tmp}" />
-                                <header filtering="false"><![CDATA[${line.separator}<types>${line.separator}    <name>@{metadataType}</name>${line.separator}]]></header>
-                                <filterchain>
-                                    <linecontains><contains value="FullName/Id" /></linecontains>
-                                </filterchain>
-                                <footer filtering="false"><![CDATA[</types>]]></footer>
-                            </concat>
-                        </then>
-                    </if>-->
 
                     <concat destFile="@{tempDir}/destructiveChangesPost.xml" append="true">
                         <fileset file="${listMetadataResult.tmp}" />
@@ -343,7 +724,6 @@
                                 if (line.indexOf("LiveChatTranscriptActive-Live") != -1) {
                                     self.setToken(null);
                                 }
-
                             </scriptfilter>
                             <linecontains><contains value="FullName/Id" /></linecontains>
                             <replaceregex pattern="FullName/Id: (.+)/.*" replace="&lt;members&gt;\1&lt;/members&gt;" />
@@ -376,7 +756,7 @@
                     <!-- SharingRules - Account.sharingRules - Error: The SharingRules called 'Account' is standard and cannot be deleted -->
                     <!-- Workflow - Account.workflow - Error: Cannot delete a workflow object; Workflow Rules and Actions must be deleted individually -->
                     <linecontainsregexp negate="true">
-                        <regexp pattern="AppMenu|AssignmentRules|AutoResponseRules|Certificate|CleanDataService|Community|CustomSite|CustomObjectTranslation|EscalationRules|InstalledPackage|MatchingRules|RecordType|SharingRules|ManagedTopic|LiveChatButton|Skill|Network|SiteDotCom|PermissionSet|LiveChatDeployment|FlowDefinition|Flow$|Workflow$|BusinessProcess|Role|FlexiPage" />
+                        <regexp pattern="AppMenu|AssignmentRules|AutoResponseRules|Certificate|CleanDataService|Community$|CustomSite|CustomObjectTranslation|EscalationRules|InstalledPackage|MatchingRules|RecordType|SharingRules|ManagedTopic|LiveChatButton|Skill|Network|SiteDotCom|PermissionSet|LiveChatDeployment|FlowDefinition|Workflow$|BusinessProcess|Role|Queue|CommunityTemplateDefinition|CommunityThemeDefinition|CustomApplication|CustomApplicationComponent|AuraDefinitionBundle" />
                     </linecontainsregexp>
 
                     <!-- Layout - Remove only: Account-Account %28Marketing%29 and WorkFeedback-Feedback Layout - Summer %2715 etc -->
@@ -396,7 +776,7 @@
                         if ('MatchingRule' == metadataType) (negate = true) | (pattern = 'Standard_');
                         if ('CustomObject' == metadataType) (negate = false) | (pattern = '__b|__c|__e|__x|__mdt');
                         if ('BusinessProcess' == metadataType) (negate = true) | (pattern = 'master');
-                        if ('CustomApplication' == metadataType) (negate = true) | (pattern = 'standard__');
+                        //if ('CustomApplication' == metadataType) (negate = true) | (pattern = 'standard__');
                         var macro = project.createTask('listMetadataForDestroy');
                         macro.setDynamicAttribute('negate', negate);
                         macro.setDynamicAttribute('pattern', pattern);
@@ -451,30 +831,11 @@
             />
 
             <!-- fix role parents - Error: Your attempt to delete the role could not be completed because at least one role reports to that role -->
-
-
             <bulkRetrieveForDestroy
                 metadataType="Role"
                 directoryName="roles"
                 pattern="&lt;parentRole&gt;(?!System_Administrator|ignoremeN)[^&lt;]+&lt;/parentRole&gt;"
                 expression="&lt;!--\0--&gt;"
-            />
-
-
-
-            <!-- fix site dependencies - Error: This static resource is referenced elsewhere in salesforce.com. Remove the usage and try again -->
-            <!--<bulkRetrieveForDestroy
-                metadataType="CustomSite"
-                directoryName="sites"
-                pattern="&lt;CustomSite xmlns=&quot;http://soap.sforce.com/2006/04/metadata&quot;&gt;.*&lt;active&gt;([^&lt;]+)&lt;/active&gt;.*&lt;allowStandardPortalPages&gt;([^&lt;]+)&lt;/allowStandardPortalPages&gt;.*&lt;clickjackProtectionLevel&gt;([^&lt;]+)&lt;/clickjackProtectionLevel&gt;.*&lt;indexPage&gt;([^&lt;]+)&lt;/indexPage&gt;.*&lt;masterLabel&gt;([^&lt;]+)&lt;/masterLabel&gt;.*&lt;requireHttps&gt;([^&lt;]+)&lt;/requireHttps&gt;.*&lt;siteType&gt;([^&lt;]+)&lt;/siteType&gt;.*&lt;subdomain&gt;([^&lt;]+)&lt;/subdomain&gt;.*&lt;/CustomSite&gt;"
-                expression="&lt;CustomSite xmlns=&quot;http://soap.sforce.com/2006/04/metadata&quot;&gt;${line.separator}&lt;active&gt;\1&lt;/active&gt;${line.separator}&lt;allowStandardPortalPages&gt;\2&lt;/allowStandardPortalPages&gt;${line.separator}&lt;clickjackProtectionLevel&gt;\3&lt;/clickjackProtectionLevel&gt;${line.separator}&lt;indexPage&gt;SiteHome&lt;/indexPage&gt;${line.separator}&lt;masterLabel&gt;\5&lt;/masterLabel&gt;${line.separator}&lt;requireHttps&gt;\6&lt;/requireHttps&gt;${line.separator}&lt;siteType&gt;\7&lt;/siteType&gt;${line.separator}&lt;subdomain&gt;\8&lt;/subdomain&gt;${line.separator}&lt;urlPathPrefix&gt;\5&lt;/urlPathPrefix&gt;${line.separator}&lt;/CustomSite&gt;"
-            />-->
-
-            <bulkRetrieveForDestroy
-                metadataType="CustomSite"
-                directoryName="sites"
-                pattern="&lt;CustomSite xmlns=&quot;http://soap.sforce.com/2006/04/metadata&quot;&gt;.*&lt;active&gt;([^&lt;]+)&lt;/active&gt;.*&lt;allowStandardPortalPages&gt;([^&lt;]+)&lt;/allowStandardPortalPages&gt;.*&lt;clickjackProtectionLevel&gt;([^&lt;]+)&lt;/clickjackProtectionLevel&gt;.*&lt;indexPage&gt;([^&lt;]+)&lt;/indexPage&gt;.*&lt;masterLabel&gt;([^&lt;]+)&lt;/masterLabel&gt;.*&lt;requireHttps&gt;([^&lt;]+)&lt;/requireHttps&gt;.*&lt;siteType&gt;([^&lt;]+)&lt;/siteType&gt;.*&lt;subdomain&gt;([^&lt;]+)&lt;/subdomain&gt;.*.*&lt;urlPathPrefix&gt;([^&lt;]+)&lt;/urlPathPrefix&gt;.*&lt;/CustomSite&gt;"
-                expression="&lt;CustomSite xmlns=&quot;http://soap.sforce.com/2006/04/metadata&quot;&gt;${line.separator}&lt;active&gt;\1&lt;/active&gt;${line.separator}&lt;allowStandardPortalPages&gt;\2&lt;/allowStandardPortalPages&gt;${line.separator}&lt;clickjackProtectionLevel&gt;\3&lt;/clickjackProtectionLevel&gt;${line.separator}&lt;indexPage&gt;SiteHome&lt;/indexPage&gt;${line.separator}&lt;masterLabel&gt;\5&lt;/masterLabel&gt;${line.separator}&lt;requireHttps&gt;\6&lt;/requireHttps&gt;${line.separator}&lt;siteType&gt;\7&lt;/siteType&gt;${line.separator}&lt;subdomain&gt;\8&lt;/subdomain&gt;${line.separator}&lt;urlPathPrefix&gt;\9&lt;/urlPathPrefix&gt;${line.separator}&lt;/CustomSite&gt;"
             />
 
             <!-- fix object listviews - Error: cannot delete last filter -->
@@ -484,23 +845,6 @@
                 pattern="&lt;listViews&gt;.*&lt;/listViews&gt;"
                 expression="&lt;listViews&gt;&lt;fullName&gt;All&lt;/fullName&gt;&lt;filterScope&gt;Everything&lt;/filterScope&gt;&lt;label&gt;All&lt;/label&gt;&lt;/listViews&gt;&lt;searchLayouts/&gt;"
             />
-
-            <!-- fix site index pages - Error: Required field is missing: indexPage -->
-            <local name="NumberOfSites.tmp" />
-            <condition property="NumberOfSites.tmp" else=""><resourcecount when="ne" count="0"><fileset dir="@{tempDir}/sites" /></resourcecount></condition>
-            <resourcecount property="NumberOfSites.tmp"><fileset dir="@{tempDir}/sites" /></resourcecount>
-            <script language="javascript">with (new JavaImporter(java.io)) {
-                if ('${NumberOfSites.tmp}') {
-                    var page = project.createTask('echo');
-                    page.setFile(new File('@{tempDir}/pages/SiteHome.page'));
-                    page.setMessage('&lt;apex:page/&gt;');
-                    page.perform();
-                    var meta = project.createTask('echo');
-                    meta.setFile(new File('@{tempDir}/pages/SiteHome.page-meta.xml'));
-                    meta.setMessage('&lt;ApexPage&gt;&lt;label&gt;SiteHome&lt;/label&gt;&lt;/ApexPage&gt;');
-                    meta.perform();
-                }
-            }</script>
 
             <!-- fix support setting queue dependencies - Error: cannot delete queue that is in use -->
             <mkdir dir="@{tempDir}/settings" />
@@ -553,16 +897,26 @@
                 </filterchain>
             </loadfile>
 
+            <!-- Unsuported Metadata references
+                Flexipages references
+                CustomSite stub page -->
+
+            <xmltask toDir="@{tempDir}/">
+                <fileset file="@{tempDir}/destructiveChangesPost.xml" />
+                <remove path="//:Package/:types/:members[text() = 'CC_UrlRewriter']"/>
+                <remove path="//:Package/:types/:members[text() = 'ClientDeliveryApprovalClass']"/>
+                <remove path="//:Package/:types/:members[text() = 'Support_Help_Center_kokua_themeLayout_login']"/>
+                <remove path="//:Package/:types/:members[text() = 'Account_Management_Home_Page']"/>
+                <remove path="//:Package/:types/:members[text() = 'Sales_Opportunity_Lightning_Page']"/>
+                <remove path="//:Package/:types/:members[text() = 'SiteHome']"/>
+            </xmltask>
+
             <!-- create package definition for fixes -->
             <echoxml file="@{tempDir}/package.xml" namespacePolicy="all">
                 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
                     <version>40.0</version>
                     <types>
                         <name>ApexPage</name>
-                        <members>*</members>
-                    </types>
-                    <types>
-                        <name>CustomSite</name>
                         <members>*</members>
                     </types>
                     <types>
@@ -588,7 +942,7 @@
                 </Package>
             </echoxml>
 
-            <!-- destroy!-->
+            <!--destroy!-->
             <sf:deploy
                 serverurl="${loginUrl}"
                 sessionid="${sessionId}"
