@@ -29,7 +29,7 @@
         <antcall target="git-fetch-branch"/>
 
         <if>
-            <equals arg1="${cleanup}" arg2="true" />
+            <equals arg1="${cleanup}" arg2="false" />
             <then>
                 <antcall target="deploy"/>
             </then>
