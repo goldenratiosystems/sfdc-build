@@ -28,7 +28,7 @@
 
         <delete file="${branchlist.file}" failonerror="false"/>
 
-        <git:git directory="${github.project.name}" verbose="true">
+        <git:git directory="${github.project.name}" verbose="false">
             <git:branchlist outputfilename="${branchlist.file}" verifycontainnames="${branch.name}" failonerror="false"/>
         </git:git>
 
@@ -61,13 +61,13 @@
         <echo>Committing to ${branch.name}</echo>
         <git:settings refId="github.settings" username="${github.user.username}" password="${github.user.password}"
               name="${github.user.name}" email="${github.user.email}"/>
-        <git:git directory="${github.project.name}" verbose="true" settingsRef="github.settings">
+        <git:git directory="${github.project.name}" verbose="false" settingsRef="github.settings">
             <git:add>
                 <fileset dir="${github.project.name}" includes="**/*"/>
             </git:add>
         </git:git>
 
-        <git:git directory="${github.project.name}" verbose="true" settingsRef="github.settings">
+        <git:git directory="${github.project.name}" verbose="false" settingsRef="github.settings">
             <git:commit message="${branch.commit.message}" settingsRef="github.settings"/>
             <!--<git:uptodate failOnError="true"/>-->
             <git:push uri="${github.project.url}"/>
