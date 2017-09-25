@@ -85,6 +85,8 @@
                 <remove path="//:Package/:types[:name/text()='AccountCriteriaBasedSharingRule']"/>
                 <remove path="//:Package/:types[:name/text()='AccountOwnerSharingRule']"/>
             </xmltask>
+            <delete file="@{dir}/accountSharingRules/Account.sharingRules" failonerror="false"/>
+            <delete file="@{dir}/profiles/Premier Support User.profile" failonerror="false"/>
 
             <zip destfile="@{zipFile}" update="true">
                 <fileset dir="@{dir}" includes="**/*.*" excludes="settings/*.settings,sharingRules/*.sharingRules,**/*.snapshot,applications/standard__LightningSalesConsole.app,applications/standard__LightningService.app,applications/standard__LightningSales.app,permissionsets/Create_Processes_INCLUDES_SEE_ALL_DATA.permissionset,permissionsets/Process_Builder.permissionset,cleanDataServices/DataCloudLeadAppend.cleanDataService,cleanDataServices/DataCloudCompanyMatch.cleanDataService,profiles/Admin.profile,profiles/Premier Support User.profile"/>
