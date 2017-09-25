@@ -84,6 +84,7 @@
             <xmltask source="@{dir}/package.xml" dest="@{dir}/package.xml">
                 <remove path="//:Package/:types[:name/text()='AccountCriteriaBasedSharingRule']"/>
                 <remove path="//:Package/:types[:name/text()='AccountOwnerSharingRule']"/>
+                <remove path="//:Package/:types[:name/text()='EmailTemplate']/:members[text()='unfiled$public']"/>
             </xmltask>
             <delete file="@{dir}/accountSharingRules/Account.sharingRules" failonerror="false"/>
             <delete file="@{dir}/profiles/Premier Support User.profile" failonerror="false"/>
