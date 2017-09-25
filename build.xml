@@ -34,6 +34,7 @@
                 <antcall target="deploy"/>
             </then>
             <else>
+                <antcall target="destroy"/>
                 <antcall target="postCleanupDeploy"/>
             </else>
        </if>
