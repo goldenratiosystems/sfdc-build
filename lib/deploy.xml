@@ -6,7 +6,7 @@
 
     <target name="buildzip">
         <echo>Salesforce Username: ${sf.username}</echo>
-      <sf:deploy
+        <sf:deploy
             username="${sf.username}"
             password="${sf.password}"
             serverurl="${sf.server}"
@@ -23,7 +23,7 @@
 
 	<target name="build" depends="makePackage">
 		<echo>Salesforce Username: ${sf.username}</echo>
-	  <sf:deploy
+	    <sf:deploy
 			username="${sf.username}"
 			password="${sf.password}"
 			serverurl="${sf.server}"
@@ -42,276 +42,107 @@
 		<delete file="deploy.zip" failonerror="false"/>
 	</target>
 
-    <target name="makeProfiles">
-        <mkdir dir="makeProfiles" />
-        <echoxml file="makeProfiles/package.xml" namespacePolicy="all">
-            <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-                <types>
-                    <name>Profile</name>
-                    <members>*</members>
-                </types>
-                <version>40.0</version>
-            </Package>
-        </echoxml>
-        <zip destfile="deployProfiles.zip" update="true">
-        <fileset dir="makeProfiles" includes="package.xml"/>
-        <fileset dir="temp/destroy/" includes="profiles/*.profile"/>
-        </zip>
-    </target>
-
-    <target name="buildProfiles">
-        <echo>Salesforce Username: ${sf.username}</echo>
-      <sf:deploy
-            username="${sf.username}"
-            password="${sf.password}"
-            serverurl="${sf.server}"
-            zipFile="deployProfiles.zip"
-            maxPoll="200"
-            pollWaitMillis="50000"
-            rollbackOnError="true"
-            singlePackage="true"
-            allowMissingFiles="false"
-            logType="Detail"
-        />
-    </target>
-
-    <target name="retrieveFlexipages">
-        <mkdir dir="retrieveFlexipages" />
-        <mkdir dir="retrieveFlexipages/src" />
-        <echoxml file="retrieveFlexipages/src/package.xml" namespacePolicy="all">
-            <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-                <types>
-                    <name>FlexiPage</name>
-                    <members>*</members>
-                </types>
-                <version>40.0</version>
-            </Package>
-        </echoxml>
-        <echo>Salesforce Username: ${sf.username}</echo>
-        <sf:retrieve
-            username="${sf.username}"
-            password="${sf.password}"
-            serverurl="${sf.server}"
-            retrieveTarget="retrieveFlexipages/src"
-            unpackaged="retrieveFlexipages/src/package.xml"
-            maxPoll="2000"
-            pollWaitMillis="5000"
-        />
-    </target>
-
-    <target name="retrieveCustomObjects">
-        <delete dir="retrieveCustomObjects" failonerror="false"/>
-        <mkdir dir="retrieveCustomObjects" />
-        <mkdir dir="retrieveCustomObjects/src" />
-        <echoxml file="retrieveCustomObjects/src/package.xml" namespacePolicy="all">
-            <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-                <types>
-                    <name>CustomObject</name>
-                    <members>Case</members>
-                    <members>OpportunityLineItem</members>
-                    <members>*</members>
-                </types>
-                <version>40.0</version>
-            </Package>
-        </echoxml>
-        <echo>Salesforce Username: ${sf.username}</echo>
-        <sf:retrieve
-            username="${sf.username}"
-            password="${sf.password}"
-            serverurl="${sf.server}"
-            retrieveTarget="retrieveCustomObjects/src"
-            unpackaged="retrieveCustomObjects/src/package.xml"
-            maxPoll="2000"
-            pollWaitMillis="5000"
-        />
-        <replace dir="retrieveCustomObjects/src">
-            <include name="**/*.object"/>
-            <replacefilter>
-                <replacetoken><![CDATA[<type>MasterDetail</type>]]></replacetoken>
-                <replacevalue><![CDATA[<type>Lookup</type>]]></replacevalue>
-            </replacefilter>
-        </replace>
-        <replaceregexp flags="gm"
-            match="&lt;webLinks&gt;[\s\S]*?&lt;\/webLinks&gt;"
-            replace="&lt;!--\0--&gt;">
-            <fileset dir="retrieveCustomObjects/src">
-                <include name="**/*.object"/>
-            </fileset>
-        </replaceregexp>
-        <replaceregexp flags="gm"
-            match="&lt;lookupFilter&gt;[\s\S]*?&lt;\/lookupFilter&gt;"
-            replace="&lt;!--\0--&gt;">
-            <fileset dir="retrieveCustomObjects/src">
-                <include name="**/*.object"/>
-            </fileset>
-        </replaceregexp>
-        <replaceregexp flags="gm"
-            match="&lt;relationshipOrder&gt;[\s\S]*?&lt;\/relationshipOrder&gt;"
-            replace="&lt;!--\0--&gt;">
-            <fileset dir="retrieveCustomObjects/src">
-                <include name="**/*.object"/>
-            </fileset>
-        </replaceregexp>
-        <replaceregexp flags="gm"
-            match="&lt;reparentableMasterDetail&gt;[\s\S]*?&lt;\/reparentableMasterDetail&gt;"
-            replace="&lt;!--\0--&gt;">
-            <fileset dir="retrieveCustomObjects/src">
-                <include name="**/*.object"/>
-            </fileset>
-        </replaceregexp>
-        <replaceregexp flags="gm"
-            match="&lt;sharingModel&gt;[\s\S]*?&lt;\/sharingModel&gt;"
-            replace="&lt;sharingModel&gt;ReadWrite&lt;\/sharingModel&gt;">
-            <fileset dir="retrieveCustomObjects/src">
-                <include name="**/*.object"/>
-            </fileset>
-
-        </replaceregexp>
-        <replaceregexp flags="gm"
-            match="&lt;externalSharingModel&gt;[\s\S]*?&lt;\/externalSharingModel&gt;"
-            replace="&lt;externalSharingModel&gt;ReadWrite&lt;\/externalSharingModel&gt;">
-            <fileset dir="retrieveCustomObjects/src">
-                <include name="**/*.object"/>
-            </fileset>
-
-        </replaceregexp>
-
-        <replaceregexp flags="gm"
-            match="&lt;externalSharingModel&gt;[\s\S]*?&lt;\/externalSharingModel&gt;"
-            replace="&lt;externalSharingModel&gt;ReadWrite&lt;\/externalSharingModel&gt;">
-            <fileset dir="retrieveCustomObjects/src">
-                <include name="**/*.object"/>
-            </fileset>
-
-        </replaceregexp>
-
-        <!--<replaceregexp flags="gs">
-            <regexp pattern="&lt;fields&gt;.*&lt;fullName&gt;([^&lt;]+)&lt;/fullName&gt;.*&lt;externalId&gt;([^&lt;]+)&lt;/externalId&gt;.*&lt;formula&gt;([^&lt;]+)&lt;/formula&gt;.*&lt;formulaTreatBlanksAs&gt;([^&lt;]+)&lt;/formulaTreatBlanksAs&gt;.*&lt;label&gt;([^&lt;]+)&lt;/label&gt;.*&lt;trackTrending&gt;([^&lt;]+)&lt;/trackTrending&gt;.*&lt;type&gt;Checkbox&lt;/type&gt;.*&lt;/fields&gt;" />
-            <substitution expression="&lt;fields&gt;${line.separator}&lt;fullName&gt;\1&lt;/fullName&gt;${line.separator}&lt;externalId&gt;\2&lt;/externalId&gt;${line.separator}&lt;formula&gt;false&lt;/formula&gt;${line.separator}&lt;formulaTreatBlanksAs&gt;\4&lt;/formulaTreatBlanksAs&gt;${line.separator}&lt;label&gt;\5&lt;/label&gt;${line.separator}&lt;trackTrending&gt;\6&lt;/trackTrending&gt;${line.separator}&lt;type&gt;Checkbox&lt;/type&gt;${line.separator}&lt;/fields&gt;" />
-            <fileset dir="retrieveCustomObjects/src">
-                <include name="**/*.object"/>
-            </fileset>
-
-        </replaceregexp>-->
-
-        <replaceFormulaField
-            dir="retrieveCustomObjects/src/objects/"
-            files="*.object"
-            type="Checkbox"
-            value="false"
-            />
-
-        <replaceFormulaField
-            dir="retrieveCustomObjects/src/objects/"
-            files="*.object"
-            type="Number"
-            value="0"
-            />
-
-        <replaceFormulaField
-            dir="retrieveCustomObjects/src/objects/"
-            files="*.object"
-            type="Text"
-            value="''"
-            />
-
-
-
-        <!--<antcall target="deployCustomObjects"/>-->
-    </target>
-
-    <macrodef name="replaceFormulaField">
-        <attribute name="dir" />
-        <attribute name="files" />
-        <attribute name="type" />
-        <attribute name="value" />
+    <macrodef name="postCleanupDeploy">
+        <attribute name="dir" default="${github.project.name}/src"/>
+        <attribute name="tmpDir" default="temp"/>
+        <attribute name="zipFile"  default="deploy.zip"/>
         <sequential>
-            <echo>Cleanup formula fields - @{type}</echo>
-            <xmltask toDir="@{dir}">
-                <fileset dir="@{dir}" includes="@{files}" />
 
-                <!--//CustomObject/fields[type='Checkbox' and formula]/formula-->
-                <replace path="//:CustomObject/:fields[:type='@{type}' and :formula]/:formula/text()" withText="@{value}"/>
-                <remove path="//:CustomObject/:fields[:type='@{type}' and :formula]/:formulaTreatBlanksAs"/>
+            <delete file="@{zipFile}" failonerror="false"/>
 
-                <!--<call path="//*[local-name()='CustomObject']/*[local-name()='fields']">-->
-                <!--<call path="//:CustomObject/:fields" id="foobar">
-                    <param name="fieldFullName" path="*[local-name()='fullName']/text()" default=""/>
-                    <param name="fieldFormulaText" path="*[local-name()='formula']/text()" default=""/>
-                    <param name="fieldType" path="*[local-name()='type']/text()" default="" id="foobar2"/>
-                    <actions>
-                        <if>
-                            <and>
-                                <equals arg1="@{fieldType}" arg2="@{type}" casesensitive="false"/>
-                                <not>
-                                    <equals arg1="@{fieldFormulaText}" arg2=""/>
-                                </not>
-                            </and>
-                            <then>
-                                <echo>field.FullName=@{fieldFullName} - @{fieldType}</echo>
-                                <echo>field.Formula.Text=@{fieldFormulaText} ${xmltask.path}</echo>
-                                <echo>${toString:foobar2}</echo>
-
-                            </then>
-                        </if>
-
-                    </actions>
-                </call>-->
+            <xmltask toDir="@{dir}/workflows">
+                <fileset dir="@{dir}/workflows" includes="*.workflow" />
+                <remove path="//:Workflow/:alerts/:recipients[:type='user' or :type='partnerUser']/:recipient"/>
+                <replace path="//:Workflow/:alerts/:recipients[:type='user' or :type='partnerUser']/:type/text()" withText="owner"/>
+                <remove path="//:Workflow/:alerts/:recipients[:type='owner'][position()&gt;1]"/>
             </xmltask>
+
+            <xmltask toDir="@{dir}/objects">
+                <fileset dir="@{dir}/objects" includes="*.object" />
+                <remove path="//:CustomObject/:webLinks[:fullName/text()[contains(., '__')]]"/>
+            </xmltask>
+
+            <for param="file">
+                <path>
+                    <fileset dir="@{dir}/documents/Client_Logos" includes="**/*.*" excludes="**/*.xml"/>
+                </path>
+                <sequential>
+                    <local name="filename" />
+                    <basename property="filename" file="@{file}"/>
+                    <echo file="@{file}"><![CDATA[]]></echo>
+                </sequential>
+            </for>
+
+            <xmltask toDir="@{dir}/objects">
+                <fileset dir="@{dir}/objects" includes="*.object" />
+                <remove path="//:CustomObject/:listViews[:fullName/text()='Sales_Queue_Opportunity_Schedule']"/>
+                <remove path="//:CustomObject/:validationRules[:fullName/text()='Kickoff_before_deadline']"/>
+                <remove path="//:CustomObject/:searchLayouts[:lookupPhoneDialogsAdditionalFields/text()[contains(., '00N')]]"/>
+                <replace path="//:CustomObject/:fields[:fullName/text()='Approver__c']/:trackHistory/text()" withText="false"/>
+            </xmltask>
+
+            <xmltask source="@{dir}/package.xml" dest="@{dir}/package.xml">
+                <remove path="//:Package/:types[:name/text()='AccountCriteriaBasedSharingRule']"/>
+                <remove path="//:Package/:types[:name/text()='AccountOwnerSharingRule']"/>
+            </xmltask>
+
+            <zip destfile="@{zipFile}" update="true">
+                <fileset dir="@{dir}" includes="**/*.*" excludes="settings/*.settings,sharingRules/*.sharingRules,**/*.snapshot,applications/standard__LightningSalesConsole.app,applications/standard__LightningService.app,applications/standard__LightningSales.app,permissionsets/Create_Processes_INCLUDES_SEE_ALL_DATA.permissionset,permissionsets/Process_Builder.permissionset,cleanDataServices/DataCloudLeadAppend.cleanDataService,cleanDataServices/DataCloudCompanyMatch.cleanDataService,profiles/Admin.profile,profiles/Premier Support User.profile"/>
+            </zip>
+
+            <sf:deploy
+                username="${sf.username}"
+                password="${sf.password}"
+                serverurl="${sf.server}"
+                zipFile="@{zipFile}"
+                ignoreWarnings="true"
+                singlePackage="true"
+                checkOnly="false"
+            />
+
         </sequential>
     </macrodef>
 
-    <target name="ab">
-        <echo>fieldType-----${fieldType} </echo>
-    </target>
+    <macrodef name="deployDocuments">
+        <attribute name="dir" default="${github.project.name}/src"/>
+        <attribute name="zipFile"  default="deploy.zip"/>
+        <attribute name="tmpDir" default="temp"/>
+        <attribute name="apiVersion" default="40"/>
+        <sequential>
 
-    <target name="readXML">
-        <replaceFormulaField
-            dir="retrieveCustomObjects/src/objects/"
-            files="*.object"
-            type="Number"
-            value="0"
+            <delete file="@{zipFile}" failonerror="false"/>
+
+            <echoxml file="@{tempDir}/package.xml" namespacePolicy="all">
+                <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+                    <types>
+                        <members>*</members>
+                        <name>Document</name>
+                    </types>
+                    <version>@{apiVersion}</version>
+                </Package>
+            </echoxml>
+
+            <zip destfile="@{zipFile}" update="true">
+                <fileset dir="@{tempDir}" includes="package.xml"/>
+                <fileset dir="${github.project.name}/src" includes="documents/**/*.*"/>
+            </zip>
+
+            <sf:deploy
+                username="${sf.username}"
+                password="${sf.password}"
+                serverurl="${sf.server}"
+                zipFile="@{zipFile}"
+                ignoreWarnings="true"
+                singlePackage="true"
+                checkOnly="false"
             />
-    </target>
 
-    <target name="deployCustomObjects">
-        <zip destfile="deployCustomObjects.zip" update="true">
-            <fileset dir="retrieveCustomObjects/src" includes="package.xml"/>
-            <!--<fileset dir="retrieveCustomObjects/src" includes="objects/*.object" excludes="objects/DHP_Promotion__c.object,objects/DHP_Resource_Program__c.object,objects/Product_Schedule__c.object,objects/Quality_Assurance_Response__c.object,objects/Rx_Provider__c.object,objects/SurveyQuestionResponse__c.object,objects/SurveyQuestionResponse__c.object"/>-->
-            <!--<fileset dir="retrieveCustomObjects/src" includes="objects/*.object"/>-->
-            <fileset dir="retrieveCustomObjects/src" includes="objects/Case.object,objects/OpportunityLineItem.object"/>
-        </zip>
-        <sf:deploy
-            username="${sf.username}"
-            password="${sf.password}"
-            serverurl="${sf.server}"
-            zipFile="deployCustomObjects.zip"
-            maxPoll="200"
-            pollWaitMillis="50000"
-            rollbackOnError="true"
-            singlePackage="true"
-            allowMissingFiles="false"
-            logType="Detail"
-        />
-    </target>
+        </sequential>
+    </macrodef>
 
-    <target name="deployFlexipages">
-        <zip destfile="deployFlexipages.zip" update="true">
-            <fileset dir="retrieveFlexipages/src" includes="package.xml"/>
-            <fileset dir="retrieveFlexipages/src" includes="flexipages/*.flexipage"/>
-        </zip>
-        <sf:deploy
-            username="${sf.username}"
-            password="${sf.password}"
-            serverurl="${sf.server}"
-            zipFile="deployFlexipages.zip"
-            maxPoll="200"
-            pollWaitMillis="50000"
-            rollbackOnError="true"
-            singlePackage="true"
-            allowMissingFiles="false"
-            logType="Detail"
-        />
+    <target name="postCleanupDeploy">
+        <postCleanupDeploy/>
+        <deployDocuments/>
     </target>
 
 	<target name="makePackage" description="Deploys code local src dir to salesforce org specified in build.properties!" depends="clearPackage">
@@ -387,7 +218,7 @@ settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,
         <antcall target="copy-meta"/>
     </target>
 
-     <target name="copy-package">
+    <target name="copy-package">
         <copy file="${github.project.name}/src/package.xml" todir="${retrieve.dir}/src">
         </copy>
     </target>
