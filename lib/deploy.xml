@@ -142,6 +142,7 @@
 
     <target name="postCleanupDeploy">
         <postCleanupDeploy/>
+        <antcall target="git-fetch-branch"/>
         <deployDocuments/>
     </target>
 
