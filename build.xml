@@ -46,10 +46,6 @@
         <antcall target="git-commit-to-branch"/>
     </target>
 
-    <target name="clean-org">
-        <antcall target="undeploy"/>
-    </target>
-
     <target name="destroy">
 
         <antcall target="deactivateFlows"/>
