@@ -47,53 +47,12 @@
     </macrodef>
 
     <!-- PrePurge Deployments-->
+
     <!-- Step 1 : Deactivate Flows-->
 
     <target name="deactivateFlows">
         <deactivateFlows/>
     </target>
-
-    <target name="generateDestructiveFlows">
-        <property name="dir" value="temp/prepurge/retrieveFlows/src/flows"/>
-        <property name="outputFile" value="temp/prepurge/retrieveFlows/src/destructiveChangesPost.xml"/>
-
-        <!--<echoxml file="${outputFile}" namespacePolicy="all">-->
-        <concat destFile="${outputFile}" append="true"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
-            <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-                <types>
-                <name>Flow</name>
-            ]]>
-        </concat>
-
-        <for param="file">
-            <path>
-                <fileset dir="${dir}">
-                    <include name="*.flow"/>
-                </fileset>
-            </path>
-            <sequential>
-                <local name="filename" />
-                <basename property="filename" file="@{file}"/>
-                <script language="javascript"><![CDATA[with (new JavaImporter(java.net, java.io)) {
-                        arr = project.getProperty('filename').replace('.flow','');
-                        print(arr);
-                        project.setProperty('filename', arr);
-                     }]]>
-                 </script>
-                <!--<echo message="${filename}"/>-->
-                <echo append="true" file="${outputFile}"><![CDATA[<members>${filename}</members>${line.separator}]]></echo>
-            </sequential>
-        </for>
-
-        <!--<echoxml file="${outputFile}" namespacePolicy="all"><![CDATA[-->
-        <concat destFile="${outputFile}" append="true"><![CDATA[
-            </types>
-            <version>40.0</version>
-            </Package>]]>
-        </concat>
-
-    </target>
-
 
     <macrodef name="deactivateFlows">
         <attribute name="type" default="retrieveFlows"/>
@@ -127,25 +86,24 @@
             </condition>
 
             <if>
-             <equals arg1="${flowavailable}" arg2="true" />
-             <then>
+                <equals arg1="${flowavailable}" arg2="true" />
+            <then>
+                <!-- set Flow activeVersionNumber as 0-->
+                <xmltask toDir="@{tempDir}/@{type}/src/flowDefinitions">
+                    <fileset dir="@{tempDir}/@{type}/src/flowDefinitions" includes="*.flowDefinition" />
+                    <replace path="//:FlowDefinition/:activeVersionNumber/text()" withText="0"/>
+                </xmltask>
 
-            <!-- set Flow activeVersionNumber as 0-->
-            <xmltask toDir="@{tempDir}/@{type}/src/flowDefinitions">
-                <fileset dir="@{tempDir}/@{type}/src/flowDefinitions" includes="*.flowDefinition" />
-                <replace path="//:FlowDefinition/:activeVersionNumber/text()" withText="0"/>
-            </xmltask>
+                <antcall target="generateDestructiveFlows"/>
 
-            <antcall target="generateDestructiveFlows"/>
+                <!-- create meta zip file-->
+                <zip destfile="@{tempDir}/@{type}/@{zipFile}" update="true">
+                    <fileset dir="@{tempDir}/@{type}/src" includes="package.xml"/>
+                    <fileset dir="@{tempDir}/@{type}/src" includes="destructiveChangesPost.xml"/>
+                    <fileset dir="@{tempDir}/@{type}/src" includes="flowDefinitions/*.flowDefinition"/>
+                </zip>
 
-            <!-- create meta zip file-->
-            <zip destfile="@{tempDir}/@{type}/@{zipFile}" update="true">
-                <fileset dir="@{tempDir}/@{type}/src" includes="package.xml"/>
-                <fileset dir="@{tempDir}/@{type}/src" includes="destructiveChangesPost.xml"/>
-                <fileset dir="@{tempDir}/@{type}/src" includes="flowDefinitions/*.flowDefinition"/>
-            </zip>
-
-            <sfDeploy zipFile="@{tempDir}/@{type}/@{zipFile}" checkOnly="false" purgeOnDelete="true"/>
+                <sfDeploy zipFile="@{tempDir}/@{type}/@{zipFile}" checkOnly="false" purgeOnDelete="true"/>
 
             </then>
             </if>
@@ -153,19 +111,58 @@
         </sequential>
     </macrodef>
 
-    <target name="cleanupMetadata">
+    <target name="generateDestructiveFlows">
+        <property name="dir" value="temp/prepurge/retrieveFlows/src/flows"/>
+        <property name="outputFile" value="temp/prepurge/retrieveFlows/src/destructiveChangesPost.xml"/>
 
-        <cleanupMetadata/>
-        <deployCleanupMetadata/>
-        <!--<sfDeploy zipFile="temp/prepurge/retrieveFlows.zip"/>-->
-        <!--<generateDestructiveFlows dir="temp/prepurge/src/flows"/>-->
+        <concat destFile="${outputFile}" append="true"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+            <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+                <types>
+                <name>Flow</name>
+            ]]>
+        </concat>
+
+        <for param="file">
+            <path>
+                <fileset dir="${dir}">
+                    <include name="*.flow"/>
+                </fileset>
+            </path>
+            <sequential>
+                <local name="filename" />
+                <basename property="filename" file="@{file}"/>
+                <script language="javascript"><![CDATA[with (new JavaImporter(java.net, java.io)) {
+                        arr = project.getProperty('filename').replace('.flow','');
+                        print(arr);
+                        project.setProperty('filename', arr);
+                     }]]>
+                 </script>
+                <echo append="true" file="${outputFile}"><![CDATA[<members>${filename}</members>${line.separator}]]></echo>
+            </sequential>
+        </for>
+
+        <concat destFile="${outputFile}" append="true"><![CDATA[
+            </types>
+            <version>40.0</version>
+            </Package>]]>
+        </concat>
+
     </target>
 
+
+    <!-- Step 2 : Cleanup Metadata -->
+    <target name="cleanupMetadata">
+        <cleanupMetadata/>
+        <deployCleanupMetadata/>
+    </target>
+
+    <!-- Create zip file with specific contents and run sf deploy -->
     <macrodef name="deployCleanupMetadata">
         <attribute name="zipFile" default="deployCleanupMetadata.zip"/>
         <attribute name="type" default="cleanupMetadata"/>
         <attribute name="tempDir" default="temp/prepurge"/>
         <sequential>
+
         <zip destfile="@{tempDir}/@{type}/@{zipFile}" update="true">
             <fileset dir="@{tempDir}/@{type}/src" includes="package.xml"/>
             <fileset dir="@{tempDir}/@{type}/src" includes="flexipages/*.flexipage"/>
@@ -187,11 +184,10 @@
         <attribute name="apiVersion" default="40.0"/>
 
         <sequential>
-
-            <!--<delete dir="@{tempDir}/@{type}" failonerror="false"/>-->
             <mkdir dir="@{tempDir}/@{type}" />
             <mkdir dir="@{tempDir}/@{type}/src" />
 
+            <!-- Grab the metadata below for processing -->
             <echoxml file="@{tempDir}/@{type}/src/package.xml" namespacePolicy="all">
                 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
                     <types>
@@ -276,15 +272,16 @@
                 </Package>
             </echoxml>
 
+            <!-- place in temp folder -->
             <sfRetrieve retrieveTarget="@{tempDir}/@{type}/src" unpackaged="@{tempDir}/@{type}/src/package.xml"/>
 
-            <!-- remove page references  -->
+            <!-- remove page references from layouts -->
             <xmltask toDir="@{tempDir}/@{type}/src/layouts">
                 <fileset dir="@{tempDir}/@{type}/src/layouts" includes="*.layout" />
                 <remove path="//:Layout/:layoutSections/:layoutColumns/:layoutItems[:page]"/>
             </xmltask>
 
-            <!-- cleanup Aura components -->
+            <!-- cleanup Aura components, leave only stubs -->
             <for param="file">
                 <path>
                     <fileset dir="temp/prepurge/cleanupMetadata/src/aura">
@@ -350,7 +347,7 @@
                 </sequential>
             </for>
 
-            <!-- remove custom tabs from Applucations -->
+            <!-- remove custom tabs from Applications -->
             <xmltask toDir="@{tempDir}/@{type}/src/applications">
                 <fileset dir="@{tempDir}/@{type}/src/applications" includes="*.app" />
                 <remove path="//:CustomApplication/:tab[text()[contains(., '__c')]]"/>
@@ -358,9 +355,12 @@
                 <remove path="//:CustomApplication/:workspaceMappings/:mapping[:tab/text()[not(contains(., 'standard-'))]]"/>
             </xmltask>
 
-            <!-- cleanup Custom site-->
+            <!-- cleanup Custom Sites -->
             <replaceregexp flags="gs">
                 <fileset dir="@{tempDir}/@{type}/src/sites/" includes="*.site" />
+
+                <!-- remove references from Site URLRewriters and VF pages, e.g. selfReg, login pages, etc.
+                    Leave only stub metadata -->
                 <regexp pattern="&lt;CustomSite xmlns=&quot;http://soap.sforce.com/2006/04/metadata&quot;&gt;.*&lt;active&gt;([^&lt;]+)&lt;/active&gt;.*&lt;allowStandardPortalPages&gt;([^&lt;]+)&lt;/allowStandardPortalPages&gt;.*&lt;clickjackProtectionLevel&gt;([^&lt;]+)&lt;/clickjackProtectionLevel&gt;.*&lt;indexPage&gt;([^&lt;]+)&lt;/indexPage&gt;.*&lt;masterLabel&gt;([^&lt;]+)&lt;/masterLabel&gt;.*&lt;requireHttps&gt;([^&lt;]+)&lt;/requireHttps&gt;.*&lt;siteType&gt;([^&lt;]+)&lt;/siteType&gt;.*&lt;subdomain&gt;([^&lt;]+)&lt;/subdomain&gt;.*.*&lt;urlPathPrefix&gt;([^&lt;]+)&lt;/urlPathPrefix&gt;.*&lt;/CustomSite&gt;" />
                 <substitution expression="&lt;CustomSite xmlns=&quot;http://soap.sforce.com/2006/04/metadata&quot;&gt;${line.separator}&lt;active&gt;\1&lt;/active&gt;${line.separator}&lt;allowStandardPortalPages&gt;\2&lt;/allowStandardPortalPages&gt;${line.separator}&lt;clickjackProtectionLevel&gt;\3&lt;/clickjackProtectionLevel&gt;${line.separator}&lt;indexPage&gt;SiteHome&lt;/indexPage&gt;${line.separator}&lt;masterLabel&gt;\5&lt;/masterLabel&gt;${line.separator}&lt;requireHttps&gt;\6&lt;/requireHttps&gt;${line.separator}&lt;siteType&gt;\7&lt;/siteType&gt;${line.separator}&lt;subdomain&gt;\8&lt;/subdomain&gt;${line.separator}&lt;urlPathPrefix&gt;\9&lt;/urlPathPrefix&gt;${line.separator}&lt;/CustomSite&gt;" />
             </replaceregexp>
@@ -410,7 +410,6 @@
             <xmltask toDir="@{tempDir}/@{type}/src/communityTemplateDefinitions">
                 <fileset dir="@{tempDir}/@{type}/src/communityTemplateDefinitions" includes="*.communityTemplateDefinition" />
                 <remove path="//:CommunityTemplateDefinition/:pageSetting"/>
-                <!--<remove path="//:CommunityTemplateDefinition/:bundlesInfo[:type/text() = 'PreviewImage']"/>-->
             </xmltask>
 
             <xmltask toDir="@{tempDir}/@{type}/src/communityThemeDefinitions">
@@ -419,7 +418,6 @@
             </xmltask>
 
             <!-- Cleanup Formula Fields, lookupFilter, WebLinks, SerachLayouts -->
-
             <xmltask toDir="@{tempDir}/@{type}/src/objects">
                 <fileset dir="@{tempDir}/@{type}/src/objects" includes="*.object" />
                 <replace path="//:CustomObject/:searchLayouts">
@@ -437,6 +435,7 @@
                 <remove path="//:CustomObject/:actionOverrides[:type/text() = 'Default' and :actionName/text() = 'View'][position()&gt;1]"/>
             </xmltask>
 
+            <!-- weblinks -->
             <replaceregexp flags="gm"
                 match="&lt;webLinks&gt;[\s\S]*?&lt;\/webLinks&gt;"
                 replace="&lt;!--\0--&gt;">
@@ -445,6 +444,7 @@
                 </fileset>
             </replaceregexp>
 
+            <!-- for lookup filters -->
             <replaceregexp flags="gm"
                 match="&lt;lookupFilter&gt;[\s\S]*?&lt;\/lookupFilter&gt;"
                 replace="&lt;!--\0--&gt;">
@@ -453,6 +453,7 @@
                 </fileset>
             </replaceregexp>
 
+            <!-- default to false on checkbox values  -->
             <replaceFormulaField
                 dir="@{tempDir}/@{type}/src/objects/"
                 files="*.object"
@@ -460,6 +461,7 @@
                 value="false"
                 />
 
+            <!-- set number formulas to 0  -->
             <replaceFormulaField
                 dir="@{tempDir}/@{type}/src/objects/"
                 files="*.object"
@@ -467,6 +469,7 @@
                 value="0"
                 />
 
+            <!-- set text formulas to blank  -->
             <replaceFormulaField
                 dir="@{tempDir}/@{type}/src/objects/"
                 files="*.object"
@@ -492,18 +495,6 @@
         </sequential>
     </macrodef>
 
-    <target name="qdpl">
-        <sf:deploy
-                username="${sf.username}"
-                password="${sf.password}"
-                serverurl="${sf.server}"
-                deployRoot="temp/destroy"
-                ignoreWarnings="true"
-                singlePackage="true"
-                purgeOnDelete="true"
-            />
-    </target>
-
     <macrodef name="destroy">
 
         <attribute name="username" />
@@ -516,7 +507,7 @@
 
             <!-- prompt user to confirm
             <input message="THIS TASK IRREVERSIBLY DESTROYS ALL METADATA. ARE YOU SURE?" validargs="@{serverurl}/?un=@{username}" />-->
-
+            <echo>Obtaining sfdc session...</echo>
             <!-- http api helper -->
             <macrodef name="soapcall">
                 <text name="request" />
@@ -569,38 +560,21 @@
             <loadfile property="sessionId" srcFile="${loginResponse.tmp}">
                 <filterchain><tokenfilter><filetokenizer/><replaceregex flags="gs" pattern=".*&lt;sessionId&gt;([^&lt;]+)&lt;/sessionId&gt;.*" replace="\1" /></tokenfilter></filterchain>
             </loadfile>
+            <echo>Session Id Received!</echo>
 
-            <!-- break role and permission set dependencies with tooling api -->
-            <!--<soapcall endpoint="${loginUrl}/services/Soap/T/@{apiVersion}"><![CDATA[
-                <Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/">
-                    <Header>
-                        <SessionHeader xmlns="urn:tooling.soap.sforce.com">
-                            <sessionId>${sessionId}</sessionId>
-                        </SessionHeader>
-                    </Header>
-                    <Body>
-                        <executeAnonymous xmlns="urn:tooling.soap.sforce.com">
-                            <String>
-                                delete [SELECT Id FROM PermissionSetAssignment WHERE PermissionSet.ProfileId = null];
-                                User[] users = [SELECT Id FROM User WHERE UserRoleId != null];
-                                for (User user : users) user.UserRoleId = null;
-                                update users;
-                            </String>
-                        </executeAnonymous>
-                    </Body>
-                </Envelope>
-            ]]></soapcall>-->
 
             <!-- reset working directory -->
             <delete dir="@{tempDir}" />
             <mkdir dir="@{tempDir}" />
 
             <!-- determines org shape -->
+            <echo>Determining org shape...</echo>
             <local name="describeMetadataResult.tmp" />
             <tempfile property="describeMetadataResult.tmp" prefix="describeMetadataResult" suffix=".tmp" createfile="true" deleteonexit="true" />
             <sf:describeMetadata serverurl="${loginUrl}" sessionid="${sessionId}" resultFilePath="${describeMetadataResult.tmp}" />
 
-            <!-- clean metadata descriptions -->
+            <echo>Removing metadata descriptions...</echo>
+            <!-- clean metadata descriptions to make it easier for regex processing later -->
             <local name="metadataTypes.tmp" />
             <tempfile property="metadataTypes.tmp" prefix="metadataTypes" suffix=".tmp" createfile="true" deleteonexit="true" />
             <concat destFile="${metadataTypes.tmp}">
@@ -626,9 +600,6 @@
                     <local name="listMetadataResult.tmp" />
                     <tempfile property="listMetadataResult.tmp" prefix="@{metadataType}" suffix=".tmp" createfile="true" deleteonexit="true" />
 
-                    <!--
-                    Chat_Team Client_Delivery Marketing_Template Military_Wellness_Initiative RUSH_Tier_1_Choice RUSH_Tier_1_archive RUSH_Tier_2 Registration Rewards Sales_Team_Emails Site_Support Syncing unfiled$public
-                    -->
                     <if>
                      <equals arg1="@{metadataType}" arg2="EmailTemplate" />
                      <then>
@@ -789,6 +760,7 @@
             </macrodef>
 
             <!-- fix layout custom links - Error: This WebLink is referenced elsewhere in salesforce.com -->
+            <echo>Removing layout custom links...</echo>
             <bulkRetrieveForDestroy
                 metadataType="Layout"
                 directoryName="layouts"
@@ -797,6 +769,7 @@
             />
 
             <!-- fix layout custom buttons - Error: This WebLink is referenced elsewhere in salesforce.com - Order-Order Layout -->
+            <echo>Removing layout custom buttons...</echo>
             <replaceregexp flags="gs">
                 <fileset dir="@{tempDir}/layouts" />
                 <regexp pattern="&lt;customButtons&gt;[^&lt;]+&lt;/customButtons&gt;" />
@@ -804,6 +777,7 @@
             </replaceregexp>
 
             <!-- fix profile default apps - Error: Unable to delete custom app. Profiles are using this custom app as default -->
+            <echo>Removing default apps from profiles...</echo>
             <bulkRetrieveForDestroy
                 metadataType="Profile"
                 directoryName="profiles"
@@ -812,6 +786,7 @@
             />
 
             <!-- fix role parents - Error: Your attempt to delete the role could not be completed because at least one role reports to that role -->
+            <echo>Removing roles...</echo>
             <bulkRetrieveForDestroy
                 metadataType="Role"
                 directoryName="roles"
@@ -820,6 +795,7 @@
             />
 
             <!-- fix object listviews - Error: cannot delete last filter -->
+            <echo>Stubbing list views...</echo>
             <bulkRetrieveForDestroy
                 metadataType="ListView"
                 directoryName="objects"
@@ -828,6 +804,7 @@
             />
 
             <!-- fix support setting queue dependencies - Error: cannot delete queue that is in use -->
+            <echo>Changing default case owner...</echo>
             <mkdir dir="@{tempDir}/settings" />
             <echoxml file="@{tempDir}/settings/Case.settings" namespacePolicy="all">
                 <CaseSettings xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -837,6 +814,7 @@
             </echoxml>
 
             <!-- fix big objects - Error: Custom BigObjects do not support layouts -->
+            <echo>Removing big objects...</echo>
             <delete><fileset dir="@{tempDir}" includes="**/*__b*" /></delete>
 
             <!-- MANUAL COMPONENTS -->
@@ -896,6 +874,7 @@
             </xmltask>
 
             <!-- create package definition for fixes -->
+            <echo>Creating package definition for fixes...</echo>
             <echoxml file="@{tempDir}/package.xml" namespacePolicy="all">
                 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
                     <version>40.0</version>
@@ -927,6 +906,7 @@
             </echoxml>
 
             <!--destroy -->
+            <echo>Running destroy...</echo>
             <sf:deploy
                 serverurl="${loginUrl}"
                 sessionid="${sessionId}"
