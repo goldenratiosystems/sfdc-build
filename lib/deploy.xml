@@ -167,7 +167,7 @@
                         project.setProperty('xmltask.text', members[3]);
                      }]]>
                     </script>
-                    <xmltaskRemove dir="@{dir}/${xmltask.folder}" files="${xmltask.files}" xpath="${xmltask.xpath}" text="${xmltask.text}"/>
+                    <xmltaskReplaceWithText dir="@{dir}/${xmltask.folder}" files="${xmltask.files}" xpath="${xmltask.xpath}" text="${xmltask.text}"/>
                 </sequential>
             </for>
 
