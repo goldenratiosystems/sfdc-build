@@ -860,7 +860,7 @@
                 Flexipages references
                 CustomSite stub page -->
 
-            <xmltask toDir="@{tempDir}/">
+            <!--<xmltask toDir="@{tempDir}/">
                 <fileset file="@{tempDir}/destructiveChangesPost.xml" />
                 <remove path="//:Package/:types/:members[text() = 'CC_UrlRewriter']"/>
                 <remove path="//:Package/:types/:members[text() = 'ClientDeliveryApprovalClass']"/>
@@ -871,7 +871,14 @@
                 <remove path="//:Package/:types/:members[text() = 'CollaborationGroup.NewGroupRecord']"/>
                 <remove path="//:Package/:types/:members[text() = 'CollaborationGroup.NewGroupMember']"/>
                 <remove path="//:Package/:types/:members[text() = 'siteAsset_3740c5488bb14240a49063e97deae226']"/>
-            </xmltask>
+            </xmltask>-->
+            <for list="${destroyRemoveMetadata}" param="member">
+                <sequential>
+                    <xmltask source="@{tempDir}/destructiveChangesPost.xml" dest="@{tempDir}/destructiveChangesPost.xml">
+                        <remove path="//:Package/:types/:members[text()='@{member}']"/>
+                    </xmltask>
+                </sequential>
+            </for>
 
             <!-- create package definition for fixes -->
             <echo>Creating package definition for fixes...</echo>
