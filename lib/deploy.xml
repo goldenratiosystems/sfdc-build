@@ -95,10 +95,11 @@
                 <remove path="//:Workflow/:alerts/:recipients[:type='owner'][position()&gt;1]"/>
             </xmltask>
 
-            <!--<xmltask toDir="@{dir}/objects">
+            <xmltask toDir="@{dir}/objects">
                 <fileset dir="@{dir}/objects" includes="*.object" />
                 <remove path="//:CustomObject/:webLinks[:fullName/text()[contains(., '__')]]"/>
-            </xmltask>-->
+                <remove path="//:CustomObject/:searchLayouts[:lookupPhoneDialogsAdditionalFields/text()[contains(., '00N')]]"/>
+            </xmltask>
 
             <for param="file">
                 <path>
@@ -145,7 +146,7 @@
                 <sequential>
                     <script language="javascript"><![CDATA[with (new JavaImporter(java.net, java.io)) {
                         var member = new java.lang.String('@{xmltask.member}');
-                        var members = member.match(/\--+/g) || [];
+                        var members = member.match(/([^--]+)/g) || [];
                         project.setProperty('xmltask.folder', members[0]);
                         project.setProperty('xmltask.files', members[1]);
                         project.setProperty('xmltask.xpath', members[2]);
@@ -159,7 +160,7 @@
                 <sequential>
                     <script language="javascript"><![CDATA[with (new JavaImporter(java.net, java.io)) {
                         var member = new java.lang.String('@{xmltask.member}');
-                        var members = member.match(/\--+/g) || [];
+                        var members = member.match(/([^--]+)/g) || [];
                         project.setProperty('xmltask.folder', members[0]);
                         project.setProperty('xmltask.files', members[1]);
                         project.setProperty('xmltask.xpath', members[2]);
