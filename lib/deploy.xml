@@ -42,6 +42,44 @@
 		<delete file="deploy.zip" failonerror="false"/>
 	</target>
 
+    <macrodef name="xmltaskRemove">
+        <attribute name="dir"/>
+        <attribute name="files"/>
+        <attribute name="xpath"/>
+        <sequential>
+            <xmltask toDir="@{dir}">
+                <fileset dir="@{dir}" includes="@{files}" />
+                <remove path="@{xpath}"/>
+            </xmltask>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="xmltaskReplaceWithText">
+        <attribute name="dir"/>
+        <attribute name="files"/>
+        <attribute name="xpath"/>
+        <attribute name="text"/>
+        <sequential>
+            <xmltask toDir="@{dir}">
+                <fileset dir="@{dir}" includes="@{files}" />
+                <replace path="@{xpath}" withText="@{text}"/>
+            </xmltask>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="xmltaskReplaceWithText">
+        <attribute name="dir"/>
+        <attribute name="files"/>
+        <attribute name="xpath"/>
+        <attribute name="text"/>
+        <sequential>
+            <xmltask toDir="@{dir}">
+                <fileset dir="@{dir}" includes="@{files}" />
+                <replace path="@{xpath}" withText="@{text}"/>
+            </xmltask>
+        </sequential>
+    </macrodef>
+
     <macrodef name="postCleanupDeploy">
         <attribute name="dir" default="${github.project.name}/src"/>
         <attribute name="tmpDir" default="temp"/>
@@ -57,10 +95,10 @@
                 <remove path="//:Workflow/:alerts/:recipients[:type='owner'][position()&gt;1]"/>
             </xmltask>
 
-            <xmltask toDir="@{dir}/objects">
+            <!--<xmltask toDir="@{dir}/objects">
                 <fileset dir="@{dir}/objects" includes="*.object" />
                 <remove path="//:CustomObject/:webLinks[:fullName/text()[contains(., '__')]]"/>
-            </xmltask>
+            </xmltask>-->
 
             <for param="file">
                 <path>
@@ -73,24 +111,67 @@
                 </sequential>
             </for>
 
-            <xmltask toDir="@{dir}/objects">
+            <!--<xmltask toDir="@{dir}/objects">
                 <fileset dir="@{dir}/objects" includes="*.object" />
                 <remove path="//:CustomObject/:listViews[:fullName/text()='Sales_Queue_Opportunity_Schedule']"/>
                 <remove path="//:CustomObject/:validationRules[:fullName/text()='Kickoff_before_deadline']"/>
                 <remove path="//:CustomObject/:searchLayouts[:lookupPhoneDialogsAdditionalFields/text()[contains(., '00N')]]"/>
                 <replace path="//:CustomObject/:fields[:fullName/text()='Approver__c']/:trackHistory/text()" withText="false"/>
-            </xmltask>
+            </xmltask>-->
 
-            <xmltask source="@{dir}/package.xml" dest="@{dir}/package.xml">
+            <!--<xmltask source="@{dir}/package.xml" dest="@{dir}/package.xml">
                 <remove path="//:Package/:types[:name/text()='AccountCriteriaBasedSharingRule']"/>
                 <remove path="//:Package/:types[:name/text()='AccountOwnerSharingRule']"/>
                 <remove path="//:Package/:types[:name/text()='EmailTemplate']/:members[text()='unfiled$public']"/>
             </xmltask>
             <delete file="@{dir}/accountSharingRules/Account.sharingRules" failonerror="false"/>
-            <delete file="@{dir}/profiles/Premier Support User.profile" failonerror="false"/>
+            <delete file="@{dir}/profiles/Premier Support User.profile" failonerror="false"/>-->
+
+            <for list="${deletePackageMember}" param="member">
+                <sequential>
+                    <delete file="@{dir}/@{member}" failonerror="false"/>
+                </sequential>
+            </for>
+
+            <for list="${deployPackageMemberExcludes}" param="member">
+                <sequential>
+                    <xmltask source="@{dir}/package.xml" dest="@{dir}/package.xml">
+                        <remove path="//:Package/:types[:name/text()='@{member}']"/>
+                    </xmltask>
+                </sequential>
+            </for>
+
+            <for list="${deployRemoveMetadata}" param="xmltask.member">
+                <sequential>
+                    <script language="javascript"><![CDATA[with (new JavaImporter(java.net, java.io)) {
+                        var member = new java.lang.String('@{xmltask.member}');
+                        var members = member.match(/\--+/g) || [];
+                        project.setProperty('xmltask.folder', members[0]);
+                        project.setProperty('xmltask.files', members[1]);
+                        project.setProperty('xmltask.xpath', members[2]);
+                     }]]>
+                    </script>
+                    <xmltaskRemove dir="@{dir}/${xmltask.folder}" files="${xmltask.files}" xpath="${xmltask.xpath}"/>
+                </sequential>
+            </for>
+
+            <for list="${deployReplaceMetadata}" param="xmltask.member">
+                <sequential>
+                    <script language="javascript"><![CDATA[with (new JavaImporter(java.net, java.io)) {
+                        var member = new java.lang.String('@{xmltask.member}');
+                        var members = member.match(/\--+/g) || [];
+                        project.setProperty('xmltask.folder', members[0]);
+                        project.setProperty('xmltask.files', members[1]);
+                        project.setProperty('xmltask.xpath', members[2]);
+                        project.setProperty('xmltask.text', members[3]);
+                     }]]>
+                    </script>
+                    <xmltaskRemove dir="@{dir}/${xmltask.folder}" files="${xmltask.files}" xpath="${xmltask.xpath}" text="${xmltask.text}"/>
+                </sequential>
+            </for>
 
             <zip destfile="@{zipFile}" update="true">
-                <fileset dir="@{dir}" includes="**/*.*" excludes="settings/*.settings,sharingRules/*.sharingRules,**/*.snapshot,applications/standard__LightningSalesConsole.app,applications/standard__LightningService.app,applications/standard__LightningSales.app,permissionsets/Create_Processes_INCLUDES_SEE_ALL_DATA.permissionset,permissionsets/Process_Builder.permissionset,cleanDataServices/DataCloudLeadAppend.cleanDataService,cleanDataServices/DataCloudCompanyMatch.cleanDataService,profiles/Admin.profile,profiles/Premier Support User.profile"/>
+                <fileset dir="@{dir}" includes="**/*.*" excludes="${deployExcludes}"/>
             </zip>
 
             <sf:deploy
