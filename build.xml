@@ -17,6 +17,7 @@
     </taskdef>
 
 	<property file="build.properties"/>
+    <loadproperties srcFile="${basedir}/lib/exclude.properties"/>
 	<property environment="env"/>
 
 	<import file="${basedir}/lib/deploy.xml"/>
