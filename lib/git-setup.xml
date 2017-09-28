@@ -12,13 +12,20 @@
 
     <target name="git-setup" depends="git-clear, git-mkdr">
         <echo>Git Setup for ${github.user.name}</echo>
+        <script language="javascript">
+            var logger = project.getBuildListeners( ).firstElement( );
+            logger.setMessageOutputLevel(0);
+        </script>
         <git:settings refId="github.settings" username="${github.user.username}" password="${github.user.password}"
               name="${github.user.name}" email="${github.user.email}"/>
         <git:git directory="${github.project.name}" settingsRef="github.settings">
             <git:clone uri="${github.project.url}"/>
             <!--<git:fetch uri="${github.project.url}" directory="${github.project.name}"/>-->
         </git:git>
-
+        <script language="javascript">
+            var logger = project.getBuildListeners( ).firstElement( );
+            logger.setMessageOutputLevel(1);
+        </script>
 
     </target>
 
