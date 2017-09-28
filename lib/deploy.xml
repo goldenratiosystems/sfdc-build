@@ -80,6 +80,22 @@
         </sequential>
     </macrodef>
 
+    <macrodef name="createDir">
+        <attribute name="tmpDir"/>
+        <sequential>
+            <condition property="dirAvailable">
+                <available file="@{tmpDir}" type="dir"/>
+            </condition>
+
+            <if>
+                <equals arg1="${dirAvailable}" arg2="true" />
+                <then>
+                    <mkdir dir="@{tmpDir}"/>
+                </then>
+            </if>
+        </sequential>
+    </macrodef>
+
     <macrodef name="postCleanupDeploy">
         <attribute name="dir" default="${github.project.name}/src"/>
         <attribute name="tmpDir" default="temp"/>
@@ -111,22 +127,6 @@
                     <echo file="@{file}"><![CDATA[]]></echo>
                 </sequential>
             </for>
-
-            <!--<xmltask toDir="@{dir}/objects">
-                <fileset dir="@{dir}/objects" includes="*.object" />
-                <remove path="//:CustomObject/:listViews[:fullName/text()='Sales_Queue_Opportunity_Schedule']"/>
-                <remove path="//:CustomObject/:validationRules[:fullName/text()='Kickoff_before_deadline']"/>
-                <remove path="//:CustomObject/:searchLayouts[:lookupPhoneDialogsAdditionalFields/text()[contains(., '00N')]]"/>
-                <replace path="//:CustomObject/:fields[:fullName/text()='Approver__c']/:trackHistory/text()" withText="false"/>
-            </xmltask>-->
-
-            <!--<xmltask source="@{dir}/package.xml" dest="@{dir}/package.xml">
-                <remove path="//:Package/:types[:name/text()='AccountCriteriaBasedSharingRule']"/>
-                <remove path="//:Package/:types[:name/text()='AccountOwnerSharingRule']"/>
-                <remove path="//:Package/:types[:name/text()='EmailTemplate']/:members[text()='unfiled$public']"/>
-            </xmltask>
-            <delete file="@{dir}/accountSharingRules/Account.sharingRules" failonerror="false"/>
-            <delete file="@{dir}/profiles/Premier Support User.profile" failonerror="false"/>-->
 
             <for list="${deletePackageMember}" param="member">
                 <sequential>
@@ -196,8 +196,9 @@
         <sequential>
 
             <delete file="@{zipFile}" failonerror="false"/>
+            <createDir tmpDir="@{tmpDir}"/>
 
-            <echoxml file="@{tempDir}/package.xml" namespacePolicy="all">
+            <echoxml file="@{tmpDir}/package.xml" namespacePolicy="all">
                 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
                     <types>
                         <members>*</members>
@@ -208,7 +209,7 @@
             </echoxml>
 
             <zip destfile="@{zipFile}" update="true">
-                <fileset dir="@{tempDir}" includes="package.xml"/>
+                <fileset dir="@{tmpDir}" includes="package.xml"/>
                 <fileset dir="${github.project.name}/src" includes="documents/**/*.*"/>
             </zip>
 
