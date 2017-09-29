@@ -83,12 +83,10 @@
     <macrodef name="createDir">
         <attribute name="tmpDir"/>
         <sequential>
-            <condition property="dirAvailable">
-                <available file="@{tmpDir}" type="dir"/>
-            </condition>
-
             <if>
-                <equals arg1="${dirAvailable}" arg2="true" />
+                <not>
+                    <available file="@{tmpDir}" type="dir"/>
+                </not>
                 <then>
                     <mkdir dir="@{tmpDir}"/>
                 </then>
@@ -346,6 +344,39 @@ settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,
             <fileset dir="${retrieve.dir}/src" includes="staticresources/*.resource,staticresources/*-meta.xml"/>
             <fileset dir="${retrieve.dir}/src" includes="triggers/*.trigger,triggers/*-meta.xml"/>
         </copy>
+    </target>
+
+    <macrodef name="run-local-tests">
+        <attribute name="zipFile"  default="deployLocalTests.zip"/>
+        <attribute name="tmpDir" default="temp"/>
+        <attribute name="apiVersion" default="40"/>
+        <sequential>
+
+            <delete file="@{zipFile}" failonerror="false"/>
+            <createDir tmpDir="@{tmpDir}"/>
+
+            <echoxml file="@{tmpDir}/package.xml" namespacePolicy="all">
+                <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+                    <version>@{apiVersion}</version>
+                </Package>
+            </echoxml>
+
+            <zip destfile="@{zipFile}" update="true">
+                <fileset dir="@{tmpDir}" includes="package.xml"/>
+            </zip>
+
+            <sf:deploy
+                username="${sf.username}"
+                password="${sf.password}"
+                serverurl="${sf.server}"
+                testLevel="RunLocalTests"
+                zipFile="@{zipFile}"
+                checkOnly="true"/>
+        </sequential>
+    </macrodef>
+
+    <target name="run-local-tests">
+        <run-local-tests/>
     </target>
 
 </project>
