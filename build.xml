@@ -51,6 +51,10 @@
         <antcall target="git-merge-branch"/>
     </target>
 
+    <target name="run-tests">
+        <antcall target="run-local-tests"/>
+    </target>
+
     <target name="destroy">
 
         <antcall target="deactivateFlows"/>
