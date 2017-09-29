@@ -64,6 +64,22 @@
         </git:git>
     </target>
 
+    <target name="git-merge-branch" depends="git-setup">
+
+        <echo>Checkout branch ${branch.name}</echo>
+
+        <git:git directory="${github.project.name}" settingsRef="github.settings">
+            <git:checkout branchname="${branch.name}" createBranch="false"/>
+        </git:git>
+
+        <echo>Merge branch ${merge.branch.name} to ${branch.name} </echo>
+
+        <git:git directory="${github.project.name}" settingsRef="github.settings">
+            <git:merge branchname="${merge.branch.name}"/>
+            <git:push uri="${github.project.url}"/>
+        </git:git>
+    </target>
+
     <target name="git-commit-to-branch">
         <echo>Committing to ${branch.name}</echo>
         <git:settings refId="github.settings" username="${github.user.username}" password="${github.user.password}"
