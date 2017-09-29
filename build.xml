@@ -47,6 +47,10 @@
         <antcall target="git-commit-to-branch"/>
     </target>
 
+    <target name="merge-branch">
+        <antcall target="git-merge-branch"/>
+    </target>
+
     <target name="destroy">
 
         <antcall target="deactivateFlows"/>
