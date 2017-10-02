@@ -343,6 +343,7 @@ settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,
             <fileset dir="${retrieve.dir}/src" includes="pages/*.page,pages/*-meta.xml"/>
             <fileset dir="${retrieve.dir}/src" includes="staticresources/*.resource,staticresources/*-meta.xml"/>
             <fileset dir="${retrieve.dir}/src" includes="triggers/*.trigger,triggers/*-meta.xml"/>
+            <fileset dir="${retrieve.dir}/src" includes="flexipages/*.flexipage"/>
         </copy>
     </target>
 
