@@ -276,6 +276,12 @@
             <sfRetrieve retrieveTarget="@{tempDir}/@{type}/src" unpackaged="@{tempDir}/@{type}/src/package.xml"/>
 
             <!-- remove page references from layouts -->
+            <xmltask toDir="@{tempDir}/@{type}/src/objects">
+                <fileset dir="@{tempDir}/@{type}/src/objects" includes="Task.object" />
+                <remove path="//:CustomObject/:fieldSets[:fullName/text()='five9servicefields']/:displayedFields"/>
+            </xmltask>
+
+            <!-- remove page references from layouts -->
             <xmltask toDir="@{tempDir}/@{type}/src/layouts">
                 <fileset dir="@{tempDir}/@{type}/src/layouts" includes="*.layout" />
                 <remove path="//:Layout/:layoutSections/:layoutColumns/:layoutItems[:page]"/>
@@ -880,6 +886,40 @@
                 </sequential>
             </for>
 
+            <xmltask source="@{tempDir}/destructiveChangesPost.xml" dest="@{tempDir}/destructiveChangesPost.xml">
+                <!--<remove path="//:Package/:types/:members[text()='Activity.Abandoned_Formula__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Abandoned__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Activity_Type_2__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Answer_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Call_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Conference_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Conferences__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Consult_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Count_Row_For_SLA__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Disconnected__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Gate_Name__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Handle_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Hold_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Holds__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.IVR_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Park_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Processed__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.QA_Scored__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.QA_Scored_del__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Queue_Duration__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Ring_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Service_Level_Formula__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Service_Level__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Talk_Time_Less_Hold_and_Park__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Talk_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Third_Party_Talk_Time__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Time_to_Abandon__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Transfers__c']"/>
+                <remove path="//:Package/:types/:members[text()='Activity.Type__c']"/>-->
+                <remove path="//:Package/:types/:members[text()[contains(., 'Event.')]]"/>
+                <remove path="//:Package/:types/:members[text()[contains(., 'Task.')]]"/>
+            </xmltask>
+
             <!-- create package definition for fixes -->
             <echo>Creating package definition for fixes...</echo>
             <echoxml file="@{tempDir}/package.xml" namespacePolicy="all">
@@ -912,7 +952,7 @@
                 </Package>
             </echoxml>
 
-            <!--destroy -->
+            <!--destroy-->
             <echo>Running destroy...</echo>
             <sf:deploy
                 serverurl="${loginUrl}"
