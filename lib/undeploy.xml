@@ -886,6 +886,39 @@
                 </sequential>
             </for>
 
+            <for list="${skipCustomFields}" param="member">
+                <sequential>
+                    <xmltask source="@{tempDir}/destructiveChangesPost.xml" dest="@{tempDir}/destructiveChangesPost.xml">
+                        <remove path="//:Package/:types[:name/text()='CustomField']/:members[text()[contains(., '@{member}.')]]"/>
+                    </xmltask>
+                </sequential>
+            </for>
+
+           <script language="javascript">with (new JavaImporter(java.io)) {
+
+                var page = project.createTask('echo');
+                page.setFile(new File('@{tempDir}/classes/Testfivenineemailhandler.cls'));
+                page.setMessage('public class Testfivenineemailhandler{}');
+                page.perform();
+                var meta = project.createTask('echo');
+                meta.setFile(new File('@{tempDir}/classes/Testfivenineemailhandler.cls-meta.xml'));
+                meta.setMessage('&lt;ApexClass&gt;&lt;apiVersion&gt;40&lt;/apiVersion&gt;&lt;status&gt;Active&lt;/status&gt;&lt;/ApexClass&gt;');
+                meta.perform();}
+            </script>
+            <script language="javascript">with (new JavaImporter(java.io)) {
+
+                var page = project.createTask('echo');
+                page.setFile(new File('@{tempDir}/classes/fiveNineEmailHandler.cls'));
+                page.setMessage('global class fiveNineEmailHandler implements Messaging.InboundEmailHandler {Global Messaging.InboundEmailResult handleInboundEmail(Messaging.InboundEmail email , Messaging.Inboundenvelope envelope){return null;}}');
+                page.perform();
+                var meta = project.createTask('echo');
+                meta.setFile(new File('@{tempDir}/classes/fiveNineEmailHandler.cls-meta.xml'));
+                meta.setMessage('&lt;ApexClass&gt;&lt;apiVersion&gt;40&lt;/apiVersion&gt;&lt;status&gt;Active&lt;/status&gt;&lt;/ApexClass&gt;');
+                meta.perform();}
+            </script>
+
+
+
             <xmltask source="@{tempDir}/destructiveChangesPost.xml" dest="@{tempDir}/destructiveChangesPost.xml">
                 <!--<remove path="//:Package/:types/:members[text()='Activity.Abandoned_Formula__c']"/>
                 <remove path="//:Package/:types/:members[text()='Activity.Abandoned__c']"/>
@@ -918,6 +951,15 @@
                 <remove path="//:Package/:types/:members[text()='Activity.Type__c']"/>-->
                 <remove path="//:Package/:types/:members[text()[contains(., 'Event.')]]"/>
                 <remove path="//:Package/:types/:members[text()[contains(., 'Task.')]]"/>
+                <remove path="//:Package/:types[:name/text()='QuickAction']/:members"/>
+
+            </xmltask>
+
+            <xmltask toDir="@{tempDir}/layouts">
+                <fileset dir="@{tempDir}/layouts" includes="*.layout" />
+                <remove path="//:Layout/:platformActionList/:platformActionListItems"/>
+                <!--<remove path="//:Layout/:quickActionList"/>-->
+
             </xmltask>
 
             <!-- create package definition for fixes -->
@@ -947,6 +989,10 @@
                     </types>
                     <types>
                         <name>Settings</name>
+                        <members>*</members>
+                    </types>
+                    <types>
+                        <name>ApexClass</name>
                         <members>*</members>
                     </types>
                 </Package>
