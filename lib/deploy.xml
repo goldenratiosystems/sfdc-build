@@ -380,4 +380,43 @@ settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,
         <run-local-tests/>
     </target>
 
+    <target name="remove-unwanted-metadata">
+        <echo>remove unwanted metadata...</echo>
+        <local name="InstalledPackage.tmp" />
+        <tempfile property="InstalledPackage.tmp" prefix="InstalledPackage" suffix=".tmp" createfile="true" deleteonexit="true" />
+        <sf:listMetadata serverurl="${sf.server}" username="${sf.username}" password="${sf.password}" metadataType="InstalledPackage" resultFilePath="${InstalledPackage.tmp}" />
+        <loadfile property="" srcFile="${InstalledPackage.tmp}">
+            <filterchain>
+                <linecontains><contains value="FullName/Id" /></linecontains>
+                <replaceregex pattern="FullName/Id: (.+)/.*" replace="\1" />
+                <sortfilter />
+                <uniqfilter />
+                <scriptfilter language="javascript">
+                    var macro = project.createTask('cleanupTokens');
+                    macro.setDynamicAttribute('namespaceprefix', self.getToken());
+                    macro.execute();
+                </scriptfilter>
+            </filterchain>
+        </loadfile>
+    </target>
+
+     <macrodef name="cleanupTokens">
+        <attribute name="namespacePrefix" />
+        <sequential>
+            <echo>Stripping namespaced components: @{namespacePrefix}</echo>
+
+            <xmltask toDir="${github.project.name}/src/objects/">
+                <fileset dir="${github.project.name}/src/objects/" includes="*.object" />
+                <remove path="//:CustomObject/:fields[:fullName/text()[contains(., '@{namespacePrefix}__')]]"/>
+                <remove path="//:CustomObject/:webLinks[:fullName/text()[contains(., '@{namespacePrefix}__')]]"/>
+            </xmltask>
+
+            <replaceregexp match="(\r?\n)\s*\r?\n" flags="g" replace="\1">
+               <fileset dir="${github.project.name}/src/objects/">
+                    <include name="*.object"/>
+                </fileset>
+            </replaceregexp>
+        </sequential>
+    </macrodef>
+
 </project>
