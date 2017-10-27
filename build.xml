@@ -44,6 +44,7 @@
     <target name="save-to-branch">
         <antcall target="git-checkout-branch"/>
         <antcall target="retrieve-metadata"/>
+        <antcall target="remove-unwanted-metadata"/>
         <antcall target="git-commit-to-branch"/>
     </target>
 
