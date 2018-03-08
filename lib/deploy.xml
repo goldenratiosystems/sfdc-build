@@ -366,13 +366,17 @@ settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,
                 <fileset dir="@{tmpDir}" includes="package.xml"/>
             </zip>
 
+            <echo>Salesforce Username: ${sf.username}</echo>
+            <record name="${basedir}/consoleOutput.log" action="start"/>
             <sf:deploy
                 username="${sf.username}"
                 password="${sf.password}"
                 serverurl="${sf.server}"
                 testLevel="RunLocalTests"
                 zipFile="@{zipFile}"
-                checkOnly="true"/>
+                checkOnly="true"
+            />
+            <record name="${basedir}/consoleOutput.log" action="stop"/>
         </sequential>
     </macrodef>
 
