@@ -10,7 +10,7 @@ import requests.packages.urllib3
 
 requests.packages.urllib3.disable_warnings()
 
-print 'Run Local Tests'
+print 'Run Local Apex Tests'
 
 sf_session = ci_utils.getSalesforceSession()
 sf_headers = ci_utils.getSalesforceRequestsHeader(sf_session)
@@ -53,3 +53,7 @@ while True:
         break
 
     time.sleep(10)
+
+print 'Complete'
+print ''
+print ''
