@@ -2,7 +2,7 @@
 
 <project name="deploy" xmlns:sf="antlib:com.salesforce">
 
-	<target name="deploy" depends="build,clearPackage"/>
+    <target name="deploy" depends="build,clearPackage"/>
 
     <target name="buildzip">
         <echo>Salesforce Username: ${sf.username}</echo>
@@ -21,26 +21,34 @@
         />
     </target>
 
-	<target name="build" depends="makePackage">
-		<echo>Salesforce Username: ${sf.username}</echo>
-	    <sf:deploy
-			username="${sf.username}"
-			password="${sf.password}"
-			serverurl="${sf.server}"
-			zipFile="deploy.zip"
-			maxPoll="200"
-			pollWaitMillis="50000"
-			rollbackOnError="true"
-			singlePackage="true"
-			allowMissingFiles="false"
+    <target name="build" depends="makePackage">
+        <echo>Salesforce Username: ${sf.username}</echo>
+        <echo>Param checkOnly: ${checkOnly}</echo>
+        <sf:deploy
+            username="${sf.username}"
+            password="${sf.password}"
+            serverurl="${sf.server}"
+            zipFile="deploy.zip"
+            maxPoll="200"
+            pollWaitMillis="50000"
+            rollbackOnError="true"
+            singlePackage="true"
+            allowMissingFiles="false"
             logType="Detail"
             checkOnly="${checkOnly}"
-		/>
-	</target>
+        />
+    </target>
 
-	<target name="clearPackage">
-		<delete file="deploy.zip" failonerror="false"/>
-	</target>
+    <target name="deployValidationOnly">
+        <echo>VALIDATION ONLY DEPLOY</echo>
+        <antcall target="deploy">
+            <param name="checkOnly" value="true"/>
+        </antcall>
+    </target>
+
+    <target name="clearPackage">
+        <delete file="deploy.zip" failonerror="false"/>
+    </target>
 
     <macrodef name="xmltaskRemove">
         <attribute name="dir"/>
@@ -230,16 +238,16 @@
         <deployDocuments/>
     </target>
 
-	<target name="makePackage" description="Deploys code local src dir to salesforce org specified in build.properties!" depends="clearPackage">
-	  <zip destfile="deploy.zip" update="true">
-		<fileset dir="${github.project.name}/src" includes="package.xml"/>
-		<fileset dir="${github.project.name}/src" includes="assignmentRules/*.assignmentRules"/>
-		<fileset dir="${github.project.name}/src" includes="classes/*.cls,classes/*-meta.xml"/>
-		<fileset dir="${github.project.name}/src" includes="components/*.component,components/*-meta.xml"/>
-		<fileset dir="${github.project.name}/src" includes="labels/CustomLabels.labels"/>
+    <target name="makePackage" description="Deploys code local src dir to salesforce org specified in build.properties!" depends="clearPackage">
+      <zip destfile="deploy.zip" update="true">
+        <fileset dir="${github.project.name}/src" includes="package.xml"/>
+        <fileset dir="${github.project.name}/src" includes="assignmentRules/*.assignmentRules"/>
+        <fileset dir="${github.project.name}/src" includes="classes/*.cls,classes/*-meta.xml"/>
+        <fileset dir="${github.project.name}/src" includes="components/*.component,components/*-meta.xml"/>
+        <fileset dir="${github.project.name}/src" includes="labels/CustomLabels.labels"/>
         <fileset dir="${github.project.name}/src" includes="documents/**/*.*"/>
         <fileset dir="${github.project.name}/src" includes="email/**/*.*"/>
-		<!--<fileset dir="${github.project.name}/src" includes="layouts/*.layout"/>-->
+        <!--<fileset dir="${github.project.name}/src" includes="layouts/*.layout"/>-->
         <fileset dir="${github.project.name}/src" includes="settings/*.settings" excludes="settings/PersonalJourney.settings,
 settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,settings/Opportunity.settings,settings/Ideas.settings"/>
         <!--<fileset dir="${github.project.name}/src" includes="analyticSnapshots/*.snapshot"/>-->
@@ -273,13 +281,13 @@ settings/OrgPreference.settings,settings/Case.settings,settings/Search.settings,
         <fileset dir="${github.project.name}/src" includes="weblinks/*.weblink"/>
         <!--<fileset dir="${github.project.name}/src" includes="workflows/*.workflow"/>-->
         <!--<fileset dir="${github.project.name}/src" includes="applications/*.app" excludes="applications/CSR_Console.app"/>-->
-		<fileset dir="${github.project.name}/src" includes="objects/*.object"/>
-		<fileset dir="${github.project.name}/src" includes="pages/*.page,pages/*-meta.xml"/>
-		<fileset dir="${github.project.name}/src" includes="staticresources/*.resource,staticresources/*-meta.xml"/>
-		<!--<fileset dir="${github.project.name}/src" includes="tabs/*.tab"/>-->
-		<fileset dir="${github.project.name}/src" includes="triggers/*.trigger,triggers/*-meta.xml"/>
-	  </zip>
-	</target>
+        <fileset dir="${github.project.name}/src" includes="objects/*.object"/>
+        <fileset dir="${github.project.name}/src" includes="pages/*.page,pages/*-meta.xml"/>
+        <fileset dir="${github.project.name}/src" includes="staticresources/*.resource,staticresources/*-meta.xml"/>
+        <!--<fileset dir="${github.project.name}/src" includes="tabs/*.tab"/>-->
+        <fileset dir="${github.project.name}/src" includes="triggers/*.trigger,triggers/*-meta.xml"/>
+      </zip>
+    </target>
 
     <target name="retrieve-clear">
         <delete dir="${retrieve.dir}" failonerror="false"/>
